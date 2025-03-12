@@ -1,0 +1,23 @@
+{
+  "name": "@context-query/react",
+  "version": "0.0.1",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0"
+  },
+  "dependencies": {
+    "@context-query/core": "workspace:*",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.10"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
