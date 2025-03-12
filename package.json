@@ -1,5 +1,5 @@
 {
-  "name": "my-turborepo",
+  "name": "context-query",
   "private": true,
   "scripts": {
     "build": "turbo run build",
