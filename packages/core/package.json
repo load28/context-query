@@ -3,9 +3,6 @@
   "version": "0.0.1",
   "type": "module",
   "license": "MIT",
-  "scripts": {
-    "build": "tsc"
-  },
   "exports": {
     ".": "./src/index.ts"
   },
