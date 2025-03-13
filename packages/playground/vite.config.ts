@@ -9,6 +9,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@context-query/react": path.resolve(__dirname, "../react/src/index.ts"),
+      "@context-query/core": path.resolve(__dirname, "../core/src/index.ts"),
     },
   },
 });
