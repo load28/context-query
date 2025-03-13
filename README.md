@@ -15,6 +15,7 @@ React offers several ways to manage state, but each has limitations in specific 
 3. **React Query** excels at server state management but uses a global key-based approach, not ideal for component-scoped client state.
 
 Context Query combines the best aspects of these approaches:
+
 - **Component Tree Scoping**: Like Context API, state is tied to component lifecycle
 - **Subscription Model**: Like React Query, only components that subscribe to specific state keys re-render
 - **Simple API**: Familiar hook-based pattern similar to React's `useState`
@@ -27,11 +28,14 @@ Context Query is ideal for:
 - **Component-Scoped State**: When state should be tied to a specific component tree's lifecycle
 - **Performance Critical UIs**: When you need to minimize re-renders in complex component hierarchies
 
-It complements (not replaces) other state management tools:
-- Use **Global State** for truly app-wide state
-- Use **React Query** for server state and data fetching
-- Use **Context API** for theme/locale settings that should affect the entire tree
-- Use **Context Query** for component-scoped shared state with optimized rendering
+### Choosing the Right Tool for State Management
+
+Context Query is not a one-size-fits-all solution. For optimal performance and architecture, choose state management tools based on their intended purpose:
+
+- **Global State (Redux, Zustand)**: Use for true application-wide state that needs to persist across the entire app
+- **React Query**: Use for server state management and data fetching, which is its primary purpose
+- **Context API**: Use for theme changes, locale settings, or other cases where you intentionally want all child components to re-render
+- **Context Query**: Use when you need component tree-scoped state sharing without prop drilling, while preventing unnecessary sibling re-renders
 
 ## Features
 
@@ -83,9 +87,8 @@ import { CounterQueryProvider } from "./CounterContextQueryProvider";
 function ParentComponent() {
   return (
     <CounterQueryProvider>
-      <ChildComponentA />
-      <ChildComponentB />
-      <ChildComponentC />
+      <ChildComponentA /> {/* Only re-renders when count1 changes */}
+      <ChildComponentB /> {/* Only re-renders when count2 changes */}
     </CounterQueryProvider>
   );
 }
@@ -99,14 +102,16 @@ import { useCounterQuery } from "./CounterContextQueryProvider";
 
 function ChildComponentA() {
   const [count, setCount] = useCounterQuery("count1");
-  
+
+  console.log("ChildComponentA rendering"); // This will log when count1 changes
+
   const increment = () => {
     setCount(count + 1);
   };
 
   return (
     <div>
-      <h2>Counter from Component A: {count}</h2>
+      <h2>Counter A: {count}</h2>
       <button onClick={increment}>+</button>
     </div>
   );
@@ -116,26 +121,22 @@ function ChildComponentA() {
 import { useCounterQuery } from "./CounterContextQueryProvider";
 
 function ChildComponentB() {
-  const [count, setCount] = useCounterQuery("count1");
-  
-  // This component will re-render when count1 changes
-  // But ChildComponentC won't re-render since it doesn't use count1
-  
+  const [count, setCount] = useCounterQuery("count2");
+
+  console.log("ChildComponentB rendering"); // This won't log when count1 changes, only when count2 changes
+
+  const increment = () => {
+    setCount(count + 1);
+  };
+
   return (
     <div>
-      <h2>Counter from Component B: {count}</h2>
+      <h2>Counter B: {count}</h2>
+      <button onClick={increment}>+</button>
     </div>
   );
 }
 ```
-
-## Performance Benefits
-
-Unlike regular Context API, Context Query prevents unnecessary re-renders:
-
-- Components only re-render when their subscribed state key changes
-- Sibling components that don't use a particular state key won't re-render
-- Performance scales better with complex component trees
 
 ## Advanced Usage
 
@@ -148,7 +149,7 @@ const [count, setCount] = useCounterQuery("count1");
 
 // Update based on previous state
 const increment = () => {
-  setCount(prevCount => prevCount + 1);
+  setCount((prevCount) => prevCount + 1);
 };
 ```
 
@@ -163,7 +164,7 @@ function App() {
       <FeatureAProvider>
         <FeatureAComponents />
       </FeatureAProvider>
-      
+
       <FeatureBProvider>
         <FeatureBComponents />
       </FeatureBProvider>
@@ -191,7 +192,7 @@ The project consists of multiple packages:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/context-query.git
+git clone https://github.com/load28/context-query.git
 cd context-query
 
 # Install dependencies
@@ -201,7 +202,7 @@ pnpm install
 pnpm build
 
 # Run the playground demo
-pnpm dev
+pnpm playground
 ```
 
 ## License

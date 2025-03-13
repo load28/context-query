@@ -15,6 +15,7 @@
 3. **React Query**는 서버 상태 관리에 탁월하지만 전역적인 키 기반 접근 방식을 사용하여 컴포넌트 범위의 클라이언트 상태에는 이상적이지 않습니다.
 
 Context Query는 이러한 접근 방식의 장점을 결합합니다:
+
 - **컴포넌트 트리 스코핑**: Context API처럼 상태가 컴포넌트 라이프사이클과 연결됩니다
 - **구독 모델**: React Query처럼 특정 상태 키를 구독하는 컴포넌트만 리렌더링됩니다
 - **간단한 API**: React의 `useState`와 유사한 친숙한 훅 기반 패턴을 제공합니다
@@ -27,11 +28,14 @@ Context Query는 다음과 같은 경우에 이상적입니다:
 - **컴포넌트 범위 상태**: 상태가 특정 컴포넌트 트리의 라이프사이클과 연결되어야 할 때
 - **성능이 중요한 UI**: 복잡한 컴포넌트 계층에서 리렌더링을 최소화해야 할 때
 
-다른 상태 관리 도구와 함께 사용할 수 있습니다:
-- **전역 상태 관리**는 진정한 앱 전체 상태에 사용하세요
-- **React Query**는 서버 상태 및 데이터 가져오기에 사용하세요
-- **Context API**는 테마/로케일 설정과 같이 전체 트리에 영향을 미쳐야 하는 설정에 사용하세요
-- **Context Query**는 최적화된 렌더링으로 컴포넌트 범위의 공유 상태에 사용하세요
+### 상태 관리 도구의 올바른 선택
+
+Context Query는 모든 상황에 적합한 만능 솔루션이 아닙니다. 최적의 성능과 아키텍처를 위해 용도에 맞는 상태 관리 도구를 선택하세요:
+
+- **전역 상태 관리(Redux, Zustand)**: 앱 전체에 걸쳐 유지되어야 하는 진정한 애플리케이션 전체 상태에 사용하세요
+- **React Query**: 주 목적인 서버 상태 관리 및 데이터 페칭에 사용하세요
+- **Context API**: 테마 변경, 로케일 설정 또는 모든 하위 컴포넌트의 리렌더링을 의도적으로 원하는 경우에 사용하세요
+- **Context Query**: 프롭스 드릴링 없이 컴포넌트 트리 범위의 상태 공유가 필요하면서 불필요한 형제 컴포넌트 리렌더링은 방지하고 싶을 때 사용하세요
 
 ## 특징
 
@@ -83,9 +87,8 @@ import { CounterQueryProvider } from "./CounterContextQueryProvider";
 function ParentComponent() {
   return (
     <CounterQueryProvider>
-      <ChildComponentA />
-      <ChildComponentB />
-      <ChildComponentC />
+      <ChildComponentA /> {/* count1이 변경될 때만 리렌더링 */}
+      <ChildComponentB /> {/* count2가 변경될 때만 리렌더링 */}
     </CounterQueryProvider>
   );
 }
@@ -99,14 +102,16 @@ import { useCounterQuery } from "./CounterContextQueryProvider";
 
 function ChildComponentA() {
   const [count, setCount] = useCounterQuery("count1");
-  
+
+  console.log("ChildComponentA 렌더링"); // count1이 변경될 때만 로그가 출력됩니다
+
   const increment = () => {
     setCount(count + 1);
   };
 
   return (
     <div>
-      <h2>컴포넌트 A의 카운터: {count}</h2>
+      <h2>카운터 A: {count}</h2>
       <button onClick={increment}>+</button>
     </div>
   );
@@ -116,26 +121,22 @@ function ChildComponentA() {
 import { useCounterQuery } from "./CounterContextQueryProvider";
 
 function ChildComponentB() {
-  const [count, setCount] = useCounterQuery("count1");
-  
-  // 이 컴포넌트는 count1이 변경될 때 리렌더링됩니다
-  // 하지만 ChildComponentC는 count1을 사용하지 않기 때문에 리렌더링되지 않습니다
-  
+  const [count, setCount] = useCounterQuery("count2");
+
+  console.log("ChildComponentB 렌더링"); // count1이 변경될 때는 로그가 출력되지 않고, count2가 변경될 때만 출력됩니다
+
+  const increment = () => {
+    setCount(count + 1);
+  };
+
   return (
     <div>
-      <h2>컴포넌트 B의 카운터: {count}</h2>
+      <h2>카운터 B: {count}</h2>
+      <button onClick={increment}>+</button>
     </div>
   );
 }
 ```
-
-## 성능 이점
-
-일반 Context API와 달리, Context Query는 불필요한 리렌더링을 방지합니다:
-
-- 구독한 상태 키가 변경될 때만 컴포넌트가 리렌더링됩니다
-- 특정 상태 키를 사용하지 않는 형제 컴포넌트는 리렌더링되지 않습니다
-- 복잡한 컴포넌트 트리에서 성능이 더 잘 유지됩니다
 
 ## 고급 사용법
 
@@ -148,7 +149,7 @@ const [count, setCount] = useCounterQuery("count1");
 
 // 이전 상태를 기반으로 업데이트
 const increment = () => {
-  setCount(prevCount => prevCount + 1);
+  setCount((prevCount) => prevCount + 1);
 };
 ```
 
@@ -163,7 +164,7 @@ function App() {
       <FeatureAProvider>
         <FeatureAComponents />
       </FeatureAProvider>
-      
+
       <FeatureBProvider>
         <FeatureBComponents />
       </FeatureBProvider>
@@ -191,7 +192,7 @@ function App() {
 
 ```bash
 # 저장소 복제
-git clone https://github.com/yourusername/context-query.git
+git clone https://github.com/load28/context-query.git
 cd context-query
 
 # 의존성 설치
@@ -201,7 +202,7 @@ pnpm install
 pnpm build
 
 # 플레이그라운드 데모 실행
-pnpm dev
+pnpm playground
 ```
 
 ## 라이선스
