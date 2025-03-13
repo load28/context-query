@@ -1,5 +1,2 @@
-const createContextQuery = () => {
-  console.log("core");
-};
-
-export { createContextQuery };
+export { ContextQueryStore } from "./store";
+export type * from "./types";
