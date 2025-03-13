@@ -1,20 +1,24 @@
+import { ReactNode } from "react";
 import "./App.css";
 import { Button } from "./components/ui/button";
 import {
   CounterQueryProvider,
   useCounterQuery,
 } from "./CounterContextQueryProvider";
+import { createLogger } from "./lib/logger";
+import { LogViewer } from "./lib/LoggerViewer";
 import {
   ReactCounterProvider,
   useReactCounterState,
 } from "./ReactContextProvider";
 
+const cqLogger = createLogger("Context Query");
+const rcLogger = createLogger("React Context");
+
 function CQCounter3() {
   const [state, setState] = useCounterQuery("count3");
-  console.log(
-    "%c[CQ] Counter3 렌더링",
-    "background: #4285f4; color: white; padding: 2px 6px; border-radius: 2px;"
-  );
+
+  cqLogger.log(`Counter3 컴포넌트 렌더링 - ${state}`);
 
   const increment = () => {
     setState(state + 1);
@@ -51,12 +55,10 @@ function CQCounter3() {
   );
 }
 
-function CQCounter2({ children }: { children: React.ReactNode }) {
+function CQCounter2({ children }: { children: ReactNode }) {
   const [state, setState] = useCounterQuery("count2");
-  console.log(
-    "%c[CQ] Counter2 렌더링",
-    "background: #4285f4; color: white; padding: 2px 6px; border-radius: 2px;"
-  );
+
+  cqLogger.log(`Counter2 컴포넌트 렌더링 - ${state}`);
 
   const increment = () => {
     setState(state + 1);
@@ -97,12 +99,10 @@ function CQCounter2({ children }: { children: React.ReactNode }) {
   );
 }
 
-function CQCounter1({ children }: { children: React.ReactNode }) {
+function CQCounter1({ children }: { children: ReactNode }) {
   const [state, setState] = useCounterQuery("count1");
-  console.log(
-    "%c[CQ] Counter1 렌더링",
-    "background: #4285f4; color: white; padding: 2px 6px; border-radius: 2px;"
-  );
+
+  cqLogger.log(`Counter1 컴포넌트 렌더링 - ${state}`);
 
   const increment = () => {
     setState(state + 1);
@@ -145,10 +145,8 @@ function CQCounter1({ children }: { children: React.ReactNode }) {
 
 function RCCounter3() {
   const [state, setState] = useReactCounterState("count3");
-  console.log(
-    "%c[RC] Counter3 렌더링",
-    "background: #34a853; color: white; padding: 2px 6px; border-radius: 2px;"
-  );
+
+  rcLogger.log(`Counter3 컴포넌트 렌더링 - ${state}`);
 
   const increment = () => {
     setState(state + 1);
@@ -185,12 +183,10 @@ function RCCounter3() {
   );
 }
 
-function RCCounter2({ children }: { children: React.ReactNode }) {
+function RCCounter2({ children }: { children: ReactNode }) {
   const [state, setState] = useReactCounterState("count2");
-  console.log(
-    "%c[RC] Counter2 렌더링",
-    "background: #34a853; color: white; padding: 2px 6px; border-radius: 2px;"
-  );
+
+  rcLogger.log(`Counter2 컴포넌트 렌더링 - ${state}`);
 
   const increment = () => {
     setState(state + 1);
@@ -231,12 +227,10 @@ function RCCounter2({ children }: { children: React.ReactNode }) {
   );
 }
 
-function RCCounter1({ children }: { children: React.ReactNode }) {
+function RCCounter1({ children }: { children: ReactNode }) {
   const [state, setState] = useReactCounterState("count1");
-  console.log(
-    "%c[RC] Counter1 렌더링",
-    "background: #34a853; color: white; padding: 2px 6px; border-radius: 2px;"
-  );
+
+  rcLogger.log(`Counter1 컴포넌트 렌더링 - ${state}`);
 
   const increment = () => {
     setState(state + 1);
@@ -278,21 +272,6 @@ function RCCounter1({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  console.group("렌더링 시작");
-  console.log(
-    "%c[정보] Context API 비교 플레이그라운드 렌더링",
-    "color: #333; font-weight: bold;"
-  );
-  console.log(
-    "%c[CQ] Context Query 로그는 파란색 배경으로 표시됩니다.",
-    "background: #4285f4; color: white; padding: 2px 6px; border-radius: 2px;"
-  );
-  console.log(
-    "%c[RC] React Context 로그는 녹색 배경으로 표시됩니다.",
-    "background: #34a853; color: white; padding: 2px 6px; border-radius: 2px;"
-  );
-  console.groupEnd();
-
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
@@ -350,6 +329,11 @@ function App() {
               </div>
             </div>
           </ReactCounterProvider>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <LogViewer logger={cqLogger} maxLogs={15} />
+          <LogViewer logger={rcLogger} maxLogs={15} />
         </div>
       </div>
     </div>
