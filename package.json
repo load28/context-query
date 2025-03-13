@@ -3,7 +3,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "turbo run lint"
+    "playground": "pnpm --filter @context-query/playground run dev"
   },
   "devDependencies": {
     "prettier": "^3.5.3",
