@@ -70,12 +70,7 @@ import { createContextQuery } from "@context-query/react";
 export const {
   Provider: CounterQueryProvider,
   useContextQuery: useCounterQuery,
-} = createContextQuery({
-  initialState: {
-    count1: 0,
-    count2: 0,
-  },
-});
+} = createContextQuery<{ count1: number; count2: number }>();
 ```
 
 ### 2. Wrap Your Component Tree with the Provider
@@ -86,7 +81,7 @@ import { CounterQueryProvider } from "./CounterContextQueryProvider";
 
 function ParentComponent() {
   return (
-    <CounterQueryProvider>
+    <CounterQueryProvider initialState={count1: 0, count2: 0}>
       <ChildComponentA /> {/* Only re-renders when count1 changes */}
       <ChildComponentB /> {/* Only re-renders when count2 changes */}
     </CounterQueryProvider>

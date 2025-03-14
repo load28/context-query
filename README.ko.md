@@ -70,12 +70,7 @@ import { createContextQuery } from "@context-query/react";
 export const {
   Provider: CounterQueryProvider,
   useContextQuery: useCounterQuery,
-} = createContextQuery({
-  initialState: {
-    count1: 0,
-    count2: 0,
-  },
-});
+} = createContextQuery<{ count1: number; count2: number }>();
 ```
 
 ### 2. Provider로 컴포넌트 트리 감싸기
@@ -86,7 +81,7 @@ import { CounterQueryProvider } from "./CounterContextQueryProvider";
 
 function ParentComponent() {
   return (
-    <CounterQueryProvider>
+    <CounterQueryProvider initialState={count1: 0, count2: 0}>
       <ChildComponentA /> {/* count1이 변경될 때만 리렌더링 */}
       <ChildComponentB /> {/* count2가 변경될 때만 리렌더링 */}
     </CounterQueryProvider>
