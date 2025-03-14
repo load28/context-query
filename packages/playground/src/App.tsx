@@ -1,12 +1,7 @@
 import "./App.css";
-import {
-  ContextQueryImplementation,
-  cqLogger,
-} from "./ContextQueryImplementation";
-import {
-  ReactContextImplementation,
-  rcLogger,
-} from "./ReactContextImplementation";
+import { ContextQueryImplementation } from "./ContextQueryImplementation";
+import { cqLogger, rcLogger } from "./LoggerInstance";
+import { ReactContextImplementation } from "./ReactContextImplementation";
 import { LogViewer } from "./lib/LoggerViewer";
 
 function App() {

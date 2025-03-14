@@ -17,14 +17,20 @@ export const createContextQueryProvider = <TState extends TStateImpl>(
     initialState,
   }: ProviderProps<TState>) {
     const storeRef = useRef<ContextQueryStore<TState> | null>(null);
+    const previousStateRef = useRef<TState | null>(null);
 
     if (!storeRef.current) {
       storeRef.current = new ContextQueryStore<TState>(initialState);
+      previousStateRef.current = initialState;
     }
 
     useEffect(() => {
-      if (storeRef.current) {
+      if (
+        storeRef.current &&
+        !Object.is(previousStateRef.current, initialState)
+      ) {
         storeRef.current.updateState(initialState);
+        previousStateRef.current = initialState;
       }
     }, [initialState]);
 

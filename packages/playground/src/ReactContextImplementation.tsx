@@ -1,17 +1,17 @@
-import { ReactNode } from "react";
+import { useEffect } from "react";
 import { Button } from "./components/ui/button";
-import { createLogger } from "./lib/logger";
+import { rcLogger } from "./LoggerInstance";
 import {
   ReactCounterProvider,
   useReactCounterState,
 } from "./ReactContextProvider";
 
-const rcLogger = createLogger("React Context");
-
 function RCCounter3() {
   const [state, setState] = useReactCounterState("count3");
 
-  rcLogger.log(`Counter3 컴포넌트 렌더링 - ${state}`);
+  useEffect(() => {
+    rcLogger.log(`Counter3 컴포넌트 렌더링 - ${state}`);
+  });
 
   const increment = () => {
     setState(state + 1);
@@ -48,10 +48,12 @@ function RCCounter3() {
   );
 }
 
-function RCCounter2({ children }: { children: ReactNode }) {
+function RCCounter2() {
   const [state, setState] = useReactCounterState("count2");
 
-  rcLogger.log(`Counter2 컴포넌트 렌더링 - ${state}`);
+  useEffect(() => {
+    rcLogger.log(`Counter2 컴포넌트 렌더링 - ${state}`);
+  });
 
   const increment = () => {
     setState(state + 1);
@@ -86,16 +88,16 @@ function RCCounter2({ children }: { children: ReactNode }) {
           </div>
         </div>
       </div>
-
-      {children}
     </div>
   );
 }
 
-function RCCounter1({ children }: { children: ReactNode }) {
+function RCCounter1() {
   const [state, setState] = useReactCounterState("count1");
 
-  rcLogger.log(`Counter1 컴포넌트 렌더링 - ${state}`);
+  useEffect(() => {
+    rcLogger.log(`Counter1 컴포넌트 렌더링 - ${state}`);
+  });
 
   const increment = () => {
     setState(state + 1);
@@ -130,8 +132,6 @@ function RCCounter1({ children }: { children: ReactNode }) {
           </div>
         </div>
       </div>
-
-      {children}
     </div>
   );
 }
@@ -146,15 +146,11 @@ export function ReactContextImplementation() {
         </p>
 
         <div className="space-y-6">
-          <RCCounter1>
-            <RCCounter2>
-              <RCCounter3 />
-            </RCCounter2>
-          </RCCounter1>
+          <RCCounter1 />
+          <RCCounter2 />
+          <RCCounter3 />
         </div>
       </div>
     </ReactCounterProvider>
   );
 }
-
-export { rcLogger };

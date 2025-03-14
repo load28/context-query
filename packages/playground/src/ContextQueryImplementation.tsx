@@ -1,24 +1,24 @@
-import React, { ReactNode, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "./components/ui/button";
 import {
   CounterQueryProvider,
   useCounterQuery,
 } from "./CounterContextQueryProvider";
-import { createLogger } from "./lib/logger";
-
-const cqLogger = createLogger("Context Query");
+import { cqLogger } from "./LoggerInstance";
 
 function CQCounter3() {
   const [state, setState] = useCounterQuery("count3");
 
-  cqLogger.log(`Counter3 컴포넌트 렌더링 - ${state}`);
+  useEffect(() => {
+    cqLogger.log(`Counter3 컴포넌트 렌더링 - ${state}`);
+  });
 
   const increment = () => {
-    setState(state + 1);
+    setState((prev) => prev + 1);
   };
 
   const decrement = () => {
-    setState(state - 1);
+    setState((prev) => prev - 1);
   };
 
   const reset = () => {
@@ -48,17 +48,19 @@ function CQCounter3() {
   );
 }
 
-function CQCounter2({ children }: { children: ReactNode }) {
+function CQCounter2() {
   const [state, setState] = useCounterQuery("count2");
 
-  cqLogger.log(`Counter2 컴포넌트 렌더링 - ${state}`);
+  useEffect(() => {
+    cqLogger.log(`Counter2 컴포넌트 렌더링 - ${state}`);
+  });
 
   const increment = () => {
-    setState(state + 1);
+    setState((prev) => prev + 1);
   };
 
   const decrement = () => {
-    setState(state - 1);
+    setState((prev) => prev - 1);
   };
 
   const reset = () => {
@@ -86,19 +88,19 @@ function CQCounter2({ children }: { children: ReactNode }) {
           </div>
         </div>
       </div>
-
-      {children}
     </div>
   );
 }
 
-const CQCounter1 = React.memo(({ children }: { children: ReactNode }) => {
+const CQCounter1 = () => {
   const [state, setState] = useCounterQuery("count1");
 
-  cqLogger.log(`Counter1 컴포넌트 렌더링 - ${state}`);
+  useEffect(() => {
+    cqLogger.log(`Counter1 컴포넌트 렌더링 - ${state}`);
+  });
 
   const increment = () => {
-    setState(state + 1);
+    setState((prev) => prev + 1);
   };
 
   const decrement = () => {
@@ -130,32 +132,42 @@ const CQCounter1 = React.memo(({ children }: { children: ReactNode }) => {
           </div>
         </div>
       </div>
-
-      {children}
     </div>
   );
-});
+};
 
 export function ContextQueryImplementation() {
-  const [count1, setCount1] = useState(0);
-  const [count2, setCount2] = useState(0);
-  const [count3, setCount3] = useState(0);
+  const [counts, setCounts] = useState({ count1: 0, count2: 0, count3: 0 });
 
-  const initialState = useMemo(
-    () => ({
-      count1,
-      count2,
-      count3,
-    }),
-    [count1, count2, count3]
-  );
+  const initialState = useMemo(() => counts, [counts]);
+
+  const incrementCount1 = () => {
+    setCounts((prevCounts) => ({
+      ...prevCounts,
+      count1: prevCounts.count1 + 1,
+    }));
+  };
+
+  const incrementCount2 = () => {
+    setCounts((prevCounts) => ({
+      ...prevCounts,
+      count2: prevCounts.count2 + 1,
+    }));
+  };
+
+  const incrementCount3 = () => {
+    setCounts((prevCounts) => ({
+      ...prevCounts,
+      count3: prevCounts.count3 + 1,
+    }));
+  };
 
   return (
     <div>
       <div className="flex justify-center space-x-4 mt-4 mb-4">
-        <Button onClick={() => setCount1(count1 + 1)}>count1 증가</Button>
-        <Button onClick={() => setCount2(count2 + 1)}>count2 증가</Button>
-        <Button onClick={() => setCount3(count3 + 1)}>count3 증가</Button>
+        <Button onClick={incrementCount1}>count1 증가</Button>
+        <Button onClick={incrementCount2}>count2 증가</Button>
+        <Button onClick={incrementCount3}>count3 증가</Button>
       </div>
 
       <CounterQueryProvider initialState={initialState}>
@@ -166,16 +178,12 @@ export function ContextQueryImplementation() {
           </p>
 
           <div className="space-y-6">
-            <CQCounter1>
-              <CQCounter2>
-                <CQCounter3 />
-              </CQCounter2>
-            </CQCounter1>
+            <CQCounter1 />
+            <CQCounter2 />
+            <CQCounter3 />
           </div>
         </div>
       </CounterQueryProvider>
     </div>
   );
 }
-
-export { cqLogger };

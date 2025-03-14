@@ -23,7 +23,7 @@ export class ContextQueryStore<TState extends TStateImpl> {
     const keys = Object.keys(state) as TKey[];
 
     keys.forEach((key: TKey) => {
-      if (prevState[key] !== this.state[key]) {
+      if (!Object.is(prevState[key], this.state[key])) {
         this.notifyListeners(key);
       }
     });
@@ -35,7 +35,7 @@ export class ContextQueryStore<TState extends TStateImpl> {
     key: TKey,
     value: TState[TKey]
   ): boolean {
-    if (this.state[key] === value) {
+    if (Object.is(this.state[key], value)) {
       return false;
     }
 
