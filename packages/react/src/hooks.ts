@@ -7,11 +7,11 @@ export function createUseContextQuery<TState extends TStateImpl>(
 ) {
   const { StoreContext, ContextQuerySubscriptionContext } = contexts;
 
-  return function useContextQuery<K extends keyof TState>(
-    key: K
+  return function useContextQuery<TKey extends keyof TState>(
+    key: TKey
   ): [
-    TState[K],
-    (value: TState[K] | ((prev: TState[K]) => TState[K])) => boolean,
+    TState[TKey],
+    (value: TState[TKey] | ((prev: TState[TKey]) => TState[TKey])) => boolean,
   ] {
     const store = useContext(StoreContext);
     const subscription = useContext(ContextQuerySubscriptionContext);
@@ -28,12 +28,12 @@ export function createUseContextQuery<TState extends TStateImpl>(
       );
     }
 
-    const [state, setLocalState] = useState<TState[K]>(() =>
+    const [state, setLocalState] = useState<TState[TKey]>(() =>
       store.getStateByKey(key)
     );
 
     useEffect(() => {
-      const handleChange = (_: keyof TState, newValue: TState[K]) => {
+      const handleChange = (_: TKey, newValue: TState[TKey]) => {
         setLocalState(newValue);
       };
 
@@ -47,9 +47,9 @@ export function createUseContextQuery<TState extends TStateImpl>(
     }, [key, subscription.subscribe, store]);
 
     const setState = useCallback(
-      (value: TState[K] | ((prev: TState[K]) => TState[K])) => {
+      (value: TState[TKey] | ((prev: TState[TKey]) => TState[TKey])) => {
         if (typeof value === "function") {
-          const updateFn = value as (prev: TState[K]) => TState[K];
+          const updateFn = value as (prev: TState[TKey]) => TState[TKey];
           const currentValue = store.getStateByKey(key);
           return store.setState(key, updateFn(currentValue));
         }

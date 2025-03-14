@@ -1,37 +1,44 @@
 import { ContextQueryStore, TStateImpl } from "@context-query/core";
-import { FC, PropsWithChildren, useMemo } from "react";
+import { FC, PropsWithChildren, useEffect, useMemo, useRef } from "react";
 import { createContextQuery } from "./context";
 
 export interface ProviderProps<TState extends TStateImpl>
   extends PropsWithChildren {
-  initialState?: Partial<TState>;
+  initialState: TState;
 }
 
-export type StoreCreator<TState extends TStateImpl> = (
-  initialState?: TState
-) => ContextQueryStore<TState>;
-
 export const createContextQueryProvider = <TState extends TStateImpl>(
-  contexts: ReturnType<typeof createContextQuery<TState>>,
-  createStore: StoreCreator<TState>
+  contexts: ReturnType<typeof createContextQuery<TState>>
 ): FC<ProviderProps<TState>> => {
   const { StoreContext, ContextQuerySubscriptionContext } = contexts;
 
   return function ContextQueryProvider({
     children,
-    initialState = {},
+    initialState,
   }: ProviderProps<TState>) {
-    const store = useMemo(() => createStore(initialState as TState), []);
+    const storeRef = useRef<ContextQueryStore<TState> | null>(null);
+
+    if (!storeRef.current) {
+      storeRef.current = new ContextQueryStore<TState>(initialState);
+    }
+
+    useEffect(() => {
+      if (storeRef.current) {
+        storeRef.current.updateState(initialState);
+      }
+    }, [initialState]);
 
     const contextQuerySubscriptionContextValue = useMemo(
       () => ({
-        subscribe: store.subscribe ? store.subscribe.bind(store) : null,
+        subscribe: storeRef.current
+          ? storeRef.current.subscribe.bind(storeRef.current)
+          : null,
       }),
-      [store]
+      [storeRef.current]
     );
 
     return (
-      <StoreContext.Provider value={store}>
+      <StoreContext.Provider value={storeRef.current}>
         <ContextQuerySubscriptionContext.Provider
           value={contextQuerySubscriptionContextValue}
         >
@@ -42,14 +49,9 @@ export const createContextQueryProvider = <TState extends TStateImpl>(
   };
 };
 
-export function createReactContextQuery<TState extends TStateImpl>(
-  createStore: StoreCreator<TState>
-) {
+export function createReactContextQuery<TState extends TStateImpl>() {
   const contexts = createContextQuery<TState>();
-  const ContextQueryProvider = createContextQueryProvider<TState>(
-    contexts,
-    createStore
-  );
+  const ContextQueryProvider = createContextQueryProvider<TState>(contexts);
 
   return {
     Provider: ContextQueryProvider,

@@ -17,6 +17,20 @@ export class ContextQueryStore<TState extends TStateImpl> {
     return this.state[key];
   }
 
+  public updateState<TKey extends keyof TState>(state: TState): boolean {
+    const prevState = { ...this.state };
+    this.state = { ...state };
+    const keys = Object.keys(state) as TKey[];
+
+    keys.forEach((key: TKey) => {
+      if (prevState[key] !== this.state[key]) {
+        this.notifyListeners(key);
+      }
+    });
+
+    return true;
+  }
+
   public setState<TKey extends keyof TState>(
     key: TKey,
     value: TState[TKey]

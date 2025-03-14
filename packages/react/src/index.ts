@@ -1,18 +1,9 @@
-import { ContextQueryStore, TStateImpl } from "@context-query/core";
+import { TStateImpl } from "@context-query/core";
 import { createUseContextQuery } from "./hooks";
 import { createReactContextQuery } from "./provider";
 
-export type ContextQueryOptions<TState extends TStateImpl> = {
-  initialState: TState;
-};
-
-export function createContextQuery<TState extends TStateImpl>(
-  options: ContextQueryOptions<TState> = { initialState: {} as TState }
-) {
-  const initialState = options.initialState || ({} as TState);
-  const store = new ContextQueryStore<TState>(initialState);
-
-  const { Provider, contexts } = createReactContextQuery<TState>(() => store);
+export function createContextQuery<TState extends TStateImpl>() {
+  const { Provider, contexts } = createReactContextQuery<TState>();
 
   const useContextQuery = createUseContextQuery<TState>(contexts);
 
