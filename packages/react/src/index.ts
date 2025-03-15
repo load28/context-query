@@ -5,12 +5,13 @@ import { createReactContextQuery } from "./provider";
 export function createContextQuery<TState extends TStateImpl>() {
   const { Provider, contexts } = createReactContextQuery<TState>();
 
-  const { useContextQuery, useContextBatchQuery } =
+  const { useContextQuery, useContextBatchQuery, useContextMultiQuery } =
     createUseContextQuery<TState>(contexts);
 
   return {
     Provider,
     useContextQuery,
     useContextBatchQuery,
+    useContextMultiQuery,
   };
 }
