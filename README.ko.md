@@ -200,6 +200,27 @@ pnpm build
 pnpm playground
 ```
 
+## 릴리즈 워크플로우
+
+```mermaid
+sequenceDiagram
+    participant M as 메인 브랜치
+    participant R as 릴리즈 브랜치
+    participant W as 작업 브랜치
+
+    M->>R: 릴리즈 브랜치 생성 (0.3.0)
+    R->>W: 작업 브랜치 생성 (WIP/0.3.0/feat/update)
+    Note over W: 기능 개발 및 버그 수정
+    W->>R: 릴리즈 브랜치로 리베이스
+    Note over R: 패키지 버전 변경 (0.3.0-dev.1)
+    Note over R: 테스트 및 수정
+    Note over R: 패키지 버전 변경 (0.3.0-dev.2)
+    Note over R: 테스트 및 수정
+    Note over R: 패키지 버전 확정 (0.3.0)
+    R->>M: 메인 브랜치로 리베이스
+    M->>M: 버전 태그 추가 (v0.3.0)
+```
+
 ## 라이선스
 
 MIT

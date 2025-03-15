@@ -200,6 +200,27 @@ pnpm build
 pnpm playground
 ```
 
+## Release Workflow
+
+```mermaid
+sequenceDiagram
+    participant M as Main Branch
+    participant R as Release Branch
+    participant W as Work Branch
+
+    M->>R: Create Release Branch (0.3.0)
+    R->>W: Create Work Branch (WIP/0.3.0/feat/update)
+    Note over W: Feature Development and Bug Fixes
+    W->>R: Rebase onto Release Branch
+    Note over R: Change Package Version (0.3.0-dev.1)
+    Note over R: Test and Fix
+    Note over R: Change Package Version (0.3.0-dev.2)
+    Note over R: Test and Fix
+    Note over R: Finalize Package Version (0.3.0)
+    R->>M: Rebase onto Main Branch
+    M->>M: Add Version Tag (v0.3.0)
+```
+
 ## License
 
 MIT
