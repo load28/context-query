@@ -7,12 +7,7 @@ export function createUseContextQuery<TState extends TStateImpl>(
 ) {
   const { StoreContext, ContextQuerySubscriptionContext } = contexts;
 
-  return function useContextQuery<TKey extends keyof TState>(
-    key: TKey
-  ): [
-    TState[TKey],
-    (value: TState[TKey] | ((prev: TState[TKey]) => TState[TKey])) => boolean,
-  ] {
+  const useLocalContexts = () => {
     const store = useContext(StoreContext);
     const subscription = useContext(ContextQuerySubscriptionContext);
 
@@ -28,6 +23,33 @@ export function createUseContextQuery<TState extends TStateImpl>(
       );
     }
 
+    return { store, subscription };
+  };
+
+  const useContextBatchQuery = () => {
+    const { store } = useLocalContexts();
+    const setState = useCallback(
+      (value: TState | ((prev: TState) => TState)) => {
+        if (typeof value === "function") {
+          const updateFn = value as (prev: TState) => TState;
+          const currentValue = store.getState();
+          return store.updateState(updateFn(currentValue));
+        }
+        return store.updateState(value);
+      },
+      [store]
+    );
+
+    return setState;
+  };
+
+  const useContextQuery = <TKey extends keyof TState>(
+    key: TKey
+  ): [
+    TState[TKey],
+    (value: TState[TKey] | ((prev: TState[TKey]) => TState[TKey])) => boolean,
+  ] => {
+    const { store, subscription } = useLocalContexts();
     const [state, setLocalState] = useState<TState[TKey]>(() =>
       store.getStateByKey(key)
     );
@@ -59,5 +81,10 @@ export function createUseContextQuery<TState extends TStateImpl>(
     );
 
     return [state, setState];
+  };
+
+  return {
+    useContextBatchQuery,
+    useContextQuery,
   };
 }
