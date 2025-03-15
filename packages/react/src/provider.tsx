@@ -1,5 +1,5 @@
 import { ContextQueryStore, TStateImpl } from "@context-query/core";
-import { FC, PropsWithChildren, useEffect, useMemo, useRef } from "react";
+import { FC, PropsWithChildren, useEffect, useRef } from "react";
 import { createContextQuery } from "./context";
 
 export interface ProviderProps<TState extends TStateImpl>
@@ -10,7 +10,7 @@ export interface ProviderProps<TState extends TStateImpl>
 export const createContextQueryProvider = <TState extends TStateImpl>(
   contexts: ReturnType<typeof createContextQuery<TState>>
 ): FC<ProviderProps<TState>> => {
-  const { StoreContext, ContextQuerySubscriptionContext } = contexts;
+  const { StoreContext } = contexts;
 
   return function ContextQueryProvider({
     children,
@@ -34,22 +34,9 @@ export const createContextQueryProvider = <TState extends TStateImpl>(
       }
     }, [initialState]);
 
-    const contextQuerySubscriptionContextValue = useMemo(
-      () => ({
-        subscribe: storeRef.current
-          ? storeRef.current.subscribe.bind(storeRef.current)
-          : null,
-      }),
-      [storeRef.current]
-    );
-
     return (
       <StoreContext.Provider value={storeRef.current}>
-        <ContextQuerySubscriptionContext.Provider
-          value={contextQuerySubscriptionContextValue}
-        >
-          {children}
-        </ContextQuerySubscriptionContext.Provider>
+        {children}
       </StoreContext.Provider>
     );
   };

@@ -5,16 +5,10 @@ import { createContextQuery } from "./context";
 export function createUseContextQuery<TState extends TStateImpl>(
   contexts: ReturnType<typeof createContextQuery<TState>>
 ) {
-  const { StoreContext, ContextQuerySubscriptionContext } = contexts;
+  const { StoreContext } = contexts;
 
-  return function useContextQuery<TKey extends keyof TState>(
-    key: TKey
-  ): [
-    TState[TKey],
-    (value: TState[TKey] | ((prev: TState[TKey]) => TState[TKey])) => boolean,
-  ] {
+  const useLocalContexts = () => {
     const store = useContext(StoreContext);
-    const subscription = useContext(ContextQuerySubscriptionContext);
 
     if (!store) {
       throw new Error(
@@ -22,12 +16,33 @@ export function createUseContextQuery<TState extends TStateImpl>(
       );
     }
 
-    if (!subscription || !subscription.subscribe) {
-      throw new Error(
-        "ContextQuerySubscriptionContext not properly initialized"
-      );
-    }
+    return { store };
+  };
 
+  const useContextBatchQuery = () => {
+    const { store } = useLocalContexts();
+    const setState = useCallback(
+      (value: TState | ((prev: TState) => TState)) => {
+        if (typeof value === "function") {
+          const updateFn = value as (prev: TState) => TState;
+          const currentValue = store.getState();
+          return store.updateState(updateFn(currentValue));
+        }
+        return store.updateState(value);
+      },
+      [store]
+    );
+
+    return setState;
+  };
+
+  const useContextQuery = <TKey extends keyof TState>(
+    key: TKey
+  ): [
+    TState[TKey],
+    (value: TState[TKey] | ((prev: TState[TKey]) => TState[TKey])) => boolean,
+  ] => {
+    const { store } = useLocalContexts();
     const [state, setLocalState] = useState<TState[TKey]>(() =>
       store.getStateByKey(key)
     );
@@ -37,14 +52,12 @@ export function createUseContextQuery<TState extends TStateImpl>(
         setLocalState(newValue);
       };
 
-      if (!subscription.subscribe) return;
-
-      const sub = subscription.subscribe(key, handleChange);
+      const sub = store.subscribe(key, handleChange);
 
       return () => {
         sub.unsubscribe();
       };
-    }, [key, subscription.subscribe, store]);
+    }, [key, store]);
 
     const setState = useCallback(
       (value: TState[TKey] | ((prev: TState[TKey]) => TState[TKey])) => {
@@ -59,5 +72,10 @@ export function createUseContextQuery<TState extends TStateImpl>(
     );
 
     return [state, setState];
+  };
+
+  return {
+    useContextBatchQuery,
+    useContextQuery,
   };
 }
