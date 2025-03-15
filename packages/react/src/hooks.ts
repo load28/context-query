@@ -7,7 +7,7 @@ export function createUseContextQuery<TState extends TStateImpl>(
 ) {
   const { StoreContext } = contexts;
 
-  const useLocalContexts = () => {
+  const useStore = () => {
     const store = useContext(StoreContext);
 
     if (!store) {
@@ -16,66 +16,53 @@ export function createUseContextQuery<TState extends TStateImpl>(
       );
     }
 
-    return { store };
+    return store;
   };
 
-  const useContextBatchQuery = () => {
-    const { store } = useLocalContexts();
-    const setState = useCallback(
-      (value: TState | ((prev: TState) => TState)) => {
-        if (typeof value === "function") {
-          const updateFn = value as (prev: TState) => TState;
-          const currentValue = store.getState();
-          return store.updateState(updateFn(currentValue));
-        }
-        return store.updateState(value);
-      },
-      [store]
-    );
+  return <TKey extends keyof TState>(keys?: TKey[]) => {
+    const store = useStore();
+    const localKeys = keys ?? (Object.keys(store.getState()) as TKey[]);
 
-    return setState;
-  };
+    type StateSubset = { [K in TKey]: TState[K] };
 
-  const useContextQuery = <TKey extends keyof TState>(
-    key: TKey
-  ): [
-    TState[TKey],
-    (value: TState[TKey] | ((prev: TState[TKey]) => TState[TKey])) => boolean,
-  ] => {
-    const { store } = useLocalContexts();
-    const [state, setLocalState] = useState<TState[TKey]>(() =>
-      store.getStateByKey(key)
-    );
+    const getStateSubset = (): StateSubset => {
+      return localKeys.reduce(
+        (acc, key) => ({ ...acc, [key]: store.getStateByKey(key) }),
+        {} as StateSubset
+      );
+    };
+
+    const [state, setLocalState] = useState<StateSubset>(getStateSubset);
 
     useEffect(() => {
-      const handleChange = (_: TKey, newValue: TState[TKey]) => {
-        setLocalState(newValue);
+      const handleChange = (key: TKey, newValue: TState[TKey]) => {
+        setLocalState((prev) => ({ ...prev, [key]: newValue }));
       };
 
-      const sub = store.subscribe(key, handleChange);
+      const subscriptions = localKeys.map((key) =>
+        store.subscribe(key, handleChange)
+      );
 
       return () => {
-        sub.unsubscribe();
+        subscriptions.forEach((sub) => sub.unsubscribe());
       };
-    }, [key, store]);
+    }, [localKeys, store]);
 
     const setState = useCallback(
-      (value: TState[TKey] | ((prev: TState[TKey]) => TState[TKey])) => {
-        if (typeof value === "function") {
-          const updateFn = value as (prev: TState[TKey]) => TState[TKey];
-          const currentValue = store.getStateByKey(key);
-          return store.setState(key, updateFn(currentValue));
-        }
-        return store.setState(key, value);
+      (value: StateSubset | ((prev: StateSubset) => StateSubset)) => {
+        const currentValue = getStateSubset();
+        const updatedValue =
+          typeof value === "function"
+            ? (value as Function)(currentValue)
+            : value;
+
+        Object.entries(updatedValue).forEach(([k, v]) => {
+          store.setState(k as TKey, v as TState[TKey]);
+        });
       },
-      [key, store]
+      [localKeys, store]
     );
 
-    return [state, setState];
-  };
-
-  return {
-    useContextBatchQuery,
-    useContextQuery,
+    return [state, setState] as const;
   };
 }

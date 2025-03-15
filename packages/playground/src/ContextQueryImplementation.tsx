@@ -1,29 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect } from "react";
 import { Button } from "./components/ui/button";
 import {
   CounterQueryProvider,
-  useCounterBatchQuery,
+  setCounterState,
+  updateCounterState,
   useCounterQuery,
 } from "./CounterContextQueryProvider";
 import { cqLogger } from "./LoggerInstance";
 
 function CQCounter3() {
-  const [state, setState] = useCounterQuery("count3");
+  const [{ count3 }, setState] = useCounterQuery(["count3"]);
 
   useEffect(() => {
-    cqLogger.log(`Counter3 컴포넌트 렌더링 - ${state}`);
+    cqLogger.log(`Counter3 컴포넌트 렌더링 - ${count3}`);
   });
 
   const increment = () => {
-    setState((prev) => prev + 1);
+    setState((prev) => ({ ...prev, count3: prev.count3 + 1 }));
   };
 
   const decrement = () => {
-    setState((prev) => prev - 1);
+    setState((prev) => ({ ...prev, count3: prev.count3 - 1 }));
   };
 
   const reset = () => {
-    setState(0);
+    setState({ count3: 0 });
   };
 
   return (
@@ -31,7 +32,7 @@ function CQCounter3() {
       <div className="p-6 space-y-4">
         <h2 className="text-lg font-semibold">카운터 3</h2>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-2xl font-bold text-purple-600">{state}</span>
+          <span className="text-2xl font-bold text-purple-600">{count3}</span>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={decrement}>
               감소
@@ -50,22 +51,22 @@ function CQCounter3() {
 }
 
 function CQCounter2() {
-  const [state, setState] = useCounterQuery("count2");
+  const [{ count2 }, setState] = useCounterQuery(["count2"]);
 
   useEffect(() => {
-    cqLogger.log(`Counter2 컴포넌트 렌더링 - ${state}`);
+    cqLogger.log(`Counter2 컴포넌트 렌더링 - ${count2}`);
   });
 
   const increment = () => {
-    setState((prev) => prev + 1);
+    setState((prev) => ({ ...prev, count2: prev.count2 + 1 }));
   };
 
   const decrement = () => {
-    setState((prev) => prev - 1);
+    setState((prev) => ({ ...prev, count2: prev.count2 - 1 }));
   };
 
   const reset = () => {
-    setState(0);
+    setState({ count2: 0 });
   };
 
   return (
@@ -74,7 +75,7 @@ function CQCounter2() {
         <div className="p-6 space-y-4">
           <h2 className="text-lg font-semibold">카운터 2</h2>
           <div className="flex items-center justify-between gap-4">
-            <span className="text-2xl font-bold text-green-600">{state}</span>
+            <span className="text-2xl font-bold text-green-600">{count2}</span>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={decrement}>
                 감소
@@ -94,22 +95,22 @@ function CQCounter2() {
 }
 
 const CQCounter1 = () => {
-  const [state, setState] = useCounterQuery("count1");
+  const [state, setState] = useCounterQuery(["count1", "count2"]);
 
   useEffect(() => {
-    cqLogger.log(`Counter1 컴포넌트 렌더링 - ${state}`);
+    cqLogger.log(`Counter1 컴포넌트 렌더링 - ${state.count1} ${state.count2}`);
   });
 
   const increment = () => {
-    setState((prev) => prev + 1);
+    setState((prev) => ({ count1: prev.count1 + 1, count2: prev.count2 + 1 }));
   };
 
   const decrement = () => {
-    setState(state - 1);
+    setState((prev) => ({ count1: prev.count1 - 1, count2: prev.count2 - 1 }));
   };
 
   const reset = () => {
-    setState(0);
+    setState({ count1: 0, count2: 0 });
   };
 
   return (
@@ -118,7 +119,9 @@ const CQCounter1 = () => {
         <div className="p-6 space-y-4">
           <h2 className="text-lg font-semibold">카운터 1</h2>
           <div className="flex items-center justify-between gap-4">
-            <span className="text-2xl font-bold text-blue-600">{state}</span>
+            <span className="text-2xl font-bold text-blue-600">
+              {state.count1},{state.count2}
+            </span>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={decrement}>
                 감소
@@ -138,28 +141,23 @@ const CQCounter1 = () => {
 };
 
 export function ContextQueryImplementation() {
-  const [counts, setCounts] = useState({ count1: 0, count2: 0, count3: 0 });
-
-  const initialState = useMemo(() => counts, [counts]);
-
   const incrementCount1 = () => {
-    setCounts((prevCounts) => ({
-      ...prevCounts,
-      count1: prevCounts.count1 + 1,
-    }));
+    setCounterState("count1", (prev) => prev + 1);
   };
 
   const incrementCount2 = () => {
-    setCounts((prevCounts) => ({
-      ...prevCounts,
-      count2: prevCounts.count2 + 1,
-    }));
+    setCounterState("count2", (prev) => prev + 1);
   };
 
   const incrementCount3 = () => {
-    setCounts((prevCounts) => ({
-      ...prevCounts,
-      count3: prevCounts.count3 + 1,
+    setCounterState("count3", (prev) => prev + 1);
+  };
+
+  const incrementAllCounts = () => {
+    updateCounterState((state) => ({
+      count1: state.count1 + 1,
+      count2: state.count2 + 1,
+      count3: state.count3 + 1,
     }));
   };
 
@@ -169,9 +167,9 @@ export function ContextQueryImplementation() {
         <Button onClick={incrementCount1}>count1 증가</Button>
         <Button onClick={incrementCount2}>count2 증가</Button>
         <Button onClick={incrementCount3}>count3 증가</Button>
+        <Button onClick={incrementAllCounts}>전체 증가</Button>
       </div>
-
-      <CounterQueryProvider initialState={initialState}>
+      <CounterQueryProvider>
         <div className="rounded-lg bg-card text-card-foreground shadow-sm p-4">
           <h2 className="text-xl font-bold mb-2">Context Query 버전</h2>
           <p className="text-muted-foreground mb-4">
@@ -182,6 +180,7 @@ export function ContextQueryImplementation() {
             <CQCounter1 />
             <CQCounter2 />
             <CQCounter3 />
+            <AllStateSub />
           </div>
 
           <BatchCounterControls />
@@ -193,14 +192,12 @@ export function ContextQueryImplementation() {
 
 // 새로운 컴포넌트 추가: 일괄 처리 컨트롤
 function BatchCounterControls() {
-  const batchUpdate = useCounterBatchQuery();
-
   useEffect(() => {
     cqLogger.log("BatchCounterControls 컴포넌트 렌더링");
   });
 
   const incrementAll = () => {
-    batchUpdate((state) => ({
+    updateCounterState((state) => ({
       count1: state.count1 + 1,
       count2: state.count2 + 1,
       count3: state.count3 + 1,
@@ -208,7 +205,7 @@ function BatchCounterControls() {
   };
 
   const decrementAll = () => {
-    batchUpdate((state) => ({
+    updateCounterState((state) => ({
       count1: state.count1 - 1,
       count2: state.count2 - 1,
       count3: state.count3 - 1,
@@ -216,7 +213,7 @@ function BatchCounterControls() {
   };
 
   const resetAll = () => {
-    batchUpdate(() => ({
+    updateCounterState(() => ({
       count1: 0,
       count2: 0,
       count3: 0,
@@ -224,7 +221,7 @@ function BatchCounterControls() {
   };
 
   const multiplyAll = () => {
-    batchUpdate((state) => ({
+    updateCounterState((state) => ({
       count1: state.count1 * 2,
       count2: state.count2 * 2,
       count3: state.count3 * 2,
@@ -251,6 +248,23 @@ function BatchCounterControls() {
           모두 2배
         </Button>
       </div>
+    </div>
+  );
+}
+
+function AllStateSub() {
+  const [state] = useCounterQuery();
+
+  useEffect(() => {
+    cqLogger.log("AllStateSub 컴포넌트 렌더링");
+  });
+
+  return (
+    <div>
+      <h2>AllStateSub</h2>
+      <p>{state.count1}</p>
+      <p>{state.count2}</p>
+      <p>{state.count3}</p>
     </div>
   );
 }

@@ -1,50 +1,30 @@
 import { ContextQueryStore, TStateImpl } from "@context-query/core";
-import { FC, PropsWithChildren, useEffect, useRef } from "react";
+import { FC, PropsWithChildren } from "react";
 import { createContextQuery } from "./context";
 
-export interface ProviderProps<TState extends TStateImpl>
-  extends PropsWithChildren {
-  initialState: TState;
-}
+export type ProviderProps<TState extends TStateImpl> = PropsWithChildren;
 
 export const createContextQueryProvider = <TState extends TStateImpl>(
-  contexts: ReturnType<typeof createContextQuery<TState>>
+  contexts: ReturnType<typeof createContextQuery<TState>>,
+  store: ContextQueryStore<TState>
 ): FC<ProviderProps<TState>> => {
   const { StoreContext } = contexts;
 
-  return function ContextQueryProvider({
-    children,
-    initialState,
-  }: ProviderProps<TState>) {
-    const storeRef = useRef<ContextQueryStore<TState> | null>(null);
-    const previousStateRef = useRef<TState | null>(null);
-
-    if (!storeRef.current) {
-      storeRef.current = new ContextQueryStore<TState>(initialState);
-      previousStateRef.current = initialState;
-    }
-
-    useEffect(() => {
-      if (
-        storeRef.current &&
-        !Object.is(previousStateRef.current, initialState)
-      ) {
-        storeRef.current.updateState(initialState);
-        previousStateRef.current = initialState;
-      }
-    }, [initialState]);
-
+  return function ContextQueryProvider({ children }: ProviderProps<TState>) {
     return (
-      <StoreContext.Provider value={storeRef.current}>
-        {children}
-      </StoreContext.Provider>
+      <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
     );
   };
 };
 
-export function createReactContextQuery<TState extends TStateImpl>() {
+export function createReactContextQuery<TState extends TStateImpl>(
+  store: ContextQueryStore<TState>
+) {
   const contexts = createContextQuery<TState>();
-  const ContextQueryProvider = createContextQueryProvider<TState>(contexts);
+  const ContextQueryProvider = createContextQueryProvider<TState>(
+    contexts,
+    store
+  );
 
   return {
     Provider: ContextQueryProvider,
