@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@context-query/react": "latest",
+    "@context-query/react": "0.1.0-dev.1",
     "@radix-ui/react-slot": "^1.1.2",
     "@tailwindcss/vite": "^4.0.13",
     "class-variance-authority": "^0.7.1",

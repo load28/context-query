@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "./components/ui/button";
 import {
   CounterQueryProvider,
+  useCounterBatchQuery,
   useCounterQuery,
 } from "./CounterContextQueryProvider";
 import { cqLogger } from "./LoggerInstance";
@@ -182,8 +183,74 @@ export function ContextQueryImplementation() {
             <CQCounter2 />
             <CQCounter3 />
           </div>
+
+          <BatchCounterControls />
         </div>
       </CounterQueryProvider>
+    </div>
+  );
+}
+
+// 새로운 컴포넌트 추가: 일괄 처리 컨트롤
+function BatchCounterControls() {
+  const batchUpdate = useCounterBatchQuery();
+
+  useEffect(() => {
+    cqLogger.log("BatchCounterControls 컴포넌트 렌더링");
+  });
+
+  const incrementAll = () => {
+    batchUpdate((state) => ({
+      count1: state.count1 + 1,
+      count2: state.count2 + 1,
+      count3: state.count3 + 1,
+    }));
+  };
+
+  const decrementAll = () => {
+    batchUpdate((state) => ({
+      count1: state.count1 - 1,
+      count2: state.count2 - 1,
+      count3: state.count3 - 1,
+    }));
+  };
+
+  const resetAll = () => {
+    batchUpdate(() => ({
+      count1: 0,
+      count2: 0,
+      count3: 0,
+    }));
+  };
+
+  const multiplyAll = () => {
+    batchUpdate((state) => ({
+      count1: state.count1 * 2,
+      count2: state.count2 * 2,
+      count3: state.count3 * 2,
+    }));
+  };
+
+  return (
+    <div className="rounded-lg bg-card text-card-foreground shadow-sm mt-6 p-4 border-2 border-dashed border-purple-300">
+      <h2 className="text-lg font-semibold mb-3">일괄 처리 컨트롤</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        모든 카운터를 한 번에 업데이트합니다
+      </p>
+      <div className="flex gap-2 flex-wrap">
+        <Button onClick={incrementAll} variant="default">
+          모두 증가
+        </Button>
+        <Button onClick={decrementAll} variant="outline">
+          모두 감소
+        </Button>
+        <Button onClick={resetAll} variant="secondary">
+          모두 초기화
+        </Button>
+        <Button onClick={multiplyAll} variant="destructive">
+          모두 2배
+        </Button>
+      </div>
     </div>
   );
 }
