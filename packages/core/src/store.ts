@@ -17,7 +17,7 @@ export class ContextQueryStore<TState extends TStateImpl> {
     return this.state[key];
   }
 
-  public updateState<TKey extends keyof TState>(state: TState): boolean {
+  public updateState<TKey extends keyof TState>(state: TState): void {
     const prevState = { ...this.state };
     this.state = { ...state };
     const keys = Object.keys(state) as TKey[];
@@ -27,23 +27,19 @@ export class ContextQueryStore<TState extends TStateImpl> {
         this.notifyListeners(key);
       }
     });
-
-    return true;
   }
 
   public setState<TKey extends keyof TState>(
     key: TKey,
     value: TState[TKey]
-  ): boolean {
+  ): void {
     if (Object.is(this.state[key], value)) {
-      return false;
+      return;
     }
 
     this.state = { ...this.state, [key]: value };
 
     this.notifyListeners(key);
-
-    return true;
   }
 
   private notifyListeners<TKey extends keyof TState>(key: TKey) {

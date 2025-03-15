@@ -64,27 +64,62 @@ pnpm add @context-query/react
 ### 1. Create a Context Query Provider
 
 ```tsx
-// CounterContextQueryProvider.tsx
+// UserContextQueryProvider.tsx
 import { createContextQuery } from "@context-query/react";
 
+interface UserData {
+  name: string;
+  email: string;
+  preferences: {
+    theme: "light" | "dark";
+    notifications: boolean;
+  };
+}
+
 export const {
-  Provider: CounterQueryProvider,
-  useContextQuery: useCounterQuery,
-} = createContextQuery<{ count1: number; count2: number }>();
+  Provider: UserQueryProvider,
+  useContextQuery: useUserQuery,
+  updateState: updateUserState,
+  setState: setUserState,
+} = createContextQuery<UserData>({
+  name: "",
+  email: "",
+  preferences: {
+    theme: "light",
+    notifications: true,
+  },
+});
 ```
 
-### 2. Wrap Your Component Tree with the Provider
+### 2. Wrap Your Component Tree with the Provider and Initialize State
 
 ```tsx
-// ParentComponent.tsx
-import { CounterQueryProvider } from "./CounterContextQueryProvider";
+// UserProfilePage.tsx
+import { UserQueryProvider, updateUserState } from "./UserContextQueryProvider";
 
-function ParentComponent() {
+async function fetchUserData(userId: string) {
+  const response = await fetch(`/api/users/${userId}`);
+  return response.json();
+}
+
+function UserProfilePage({ userId }: { userId: string }) {
+  useEffect(() => {
+    // Initialize state with external data
+    const loadUserData = async () => {
+      const userData = await fetchUserData(userId);
+      updateUserState(userData); // Update entire state with fetched data
+    };
+    loadUserData();
+  }, [userId]);
+
   return (
-    <CounterQueryProvider initialState={count1: 0, count2: 0}>
-      <ChildComponentA /> {/* Only re-renders when count1 changes */}
-      <ChildComponentB /> {/* Only re-renders when count2 changes */}
-    </CounterQueryProvider>
+    <UserQueryProvider>
+      <div className="user-profile">
+        <UserInfoForm />
+        <UserPreferencesForm />
+        <SaveButton />
+      </div>
+    </UserQueryProvider>
   );
 }
 ```
@@ -92,46 +127,117 @@ function ParentComponent() {
 ### 3. Use the State in Your Components
 
 ```tsx
-// ChildComponentA.tsx
-import { useCounterQuery } from "./CounterContextQueryProvider";
+// UserInfoForm.tsx
+import { useUserQuery } from "./UserContextQueryProvider";
 
-function ChildComponentA() {
-  const [count, setCount] = useCounterQuery("count1");
-
-  console.log("ChildComponentA rendering"); // This will log when count1 changes
-
-  const increment = () => {
-    setCount(count + 1);
-  };
+function UserInfoForm() {
+  // Subscribe to user info fields only
+  const [state, setState] = useUserQuery(["name", "email"]);
 
   return (
-    <div>
-      <h2>Counter A: {count}</h2>
-      <button onClick={increment}>+</button>
+    <div className="user-info">
+      <h3>Basic Information</h3>
+      <div>
+        <label>Name:</label>
+        <input
+          value={state.name}
+          onChange={(e) =>
+            setState((prev) => ({ ...prev, name: e.target.value }))
+          }
+        />
+      </div>
+      <div>
+        <label>Email:</label>
+        <input
+          value={state.email}
+          onChange={(e) =>
+            setState((prev) => ({ ...prev, email: e.target.value }))
+          }
+        />
+      </div>
     </div>
   );
 }
 
-// ChildComponentB.tsx
-import { useCounterQuery } from "./CounterContextQueryProvider";
+// UserPreferencesForm.tsx
+import { useUserQuery } from "./UserContextQueryProvider";
 
-function ChildComponentB() {
-  const [count, setCount] = useCounterQuery("count2");
+function UserPreferencesForm() {
+  // Subscribe to preferences only
+  const [state, setState] = useUserQuery(["preferences"]);
 
-  console.log("ChildComponentB rendering"); // This won't log when count1 changes, only when count2 changes
+  const toggleTheme = () => {
+    setState((prev) => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        theme: prev.preferences.theme === "light" ? "dark" : "light",
+      },
+    }));
+  };
 
-  const increment = () => {
-    setCount(count + 1);
+  const toggleNotifications = () => {
+    setState((prev) => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        notifications: !prev.preferences.notifications,
+      },
+    }));
   };
 
   return (
-    <div>
-      <h2>Counter B: {count}</h2>
-      <button onClick={increment}>+</button>
+    <div className="user-preferences">
+      <h3>User Preferences</h3>
+      <div>
+        <label>Theme: {state.preferences.theme}</label>
+        <button onClick={toggleTheme}>Toggle Theme</button>
+      </div>
+      <div>
+        <label>
+          <input
+            type="checkbox"
+            checked={state.preferences.notifications}
+            onChange={toggleNotifications}
+          />
+          Enable Notifications
+        </label>
+      </div>
     </div>
   );
+}
+
+// SaveButton.tsx
+import { useUserQuery, updateUserState } from "./UserContextQueryProvider";
+
+function SaveButton() {
+  // Get all user data for saving
+  const [userData] = useUserQuery(["name", "email", "preferences"]);
+
+  const handleSave = async () => {
+    try {
+      const response = await fetch("/api/users/update", {
+        method: "POST",
+        body: JSON.stringify(userData),
+      });
+      const updatedUser = await response.json();
+
+      // Update entire state with server response
+      updateUserState(updatedUser);
+    } catch (error) {
+      console.error("Failed to save user data:", error);
+    }
+  };
+
+  return <button onClick={handleSave}>Save Changes</button>;
 }
 ```
+
+This example demonstrates:
+
+1. Separation of concerns by splitting user information and preferences into separate components
+2. Each component subscribes only to the state it needs, optimizing re-renders
+3. Components can independently update their relevant portions of the state
 
 ## Advanced Usage
 
@@ -140,11 +246,32 @@ function ChildComponentB() {
 Similar to React's `useState`, you can pass a function to the state setter:
 
 ```tsx
-const [count, setCount] = useCounterQuery("count1");
+const [count, setCount] = useCounterQuery(["count1"]);
 
 // Update based on previous state
 const increment = () => {
   setCount((prevCount) => prevCount + 1);
+};
+
+// Or use setState directly
+const incrementOutside = () => {
+  setCounterState("count1", (prev) => prev + 1);
+};
+```
+
+### Update Multiple States
+
+You can update multiple states at once using the updateState function:
+
+```tsx
+import { updateCounterState } from "./CounterContextQueryProvider";
+
+// Update multiple states at once
+const resetCounters = () => {
+  updateCounterState({
+    count1: 0,
+    count2: 0,
+  });
 };
 ```
 

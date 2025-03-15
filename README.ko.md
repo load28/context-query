@@ -64,27 +64,62 @@ pnpm add @context-query/react
 ### 1. Context Query Provider 생성
 
 ```tsx
-// CounterContextQueryProvider.tsx
+// UserContextQueryProvider.tsx
 import { createContextQuery } from "@context-query/react";
 
+interface UserData {
+  name: string;
+  email: string;
+  preferences: {
+    theme: "light" | "dark";
+    notifications: boolean;
+  };
+}
+
 export const {
-  Provider: CounterQueryProvider,
-  useContextQuery: useCounterQuery,
-} = createContextQuery<{ count1: number; count2: number }>();
+  Provider: UserQueryProvider,
+  useContextQuery: useUserQuery,
+  updateState: updateUserState,
+  setState: setUserState,
+} = createContextQuery<UserData>({
+  name: "",
+  email: "",
+  preferences: {
+    theme: "light",
+    notifications: true,
+  },
+});
 ```
 
-### 2. Provider로 컴포넌트 트리 감싸기
+### 2. Provider로 컴포넌트 트리 감싸기 및 상태 초기화
 
 ```tsx
-// ParentComponent.tsx
-import { CounterQueryProvider } from "./CounterContextQueryProvider";
+// UserProfilePage.tsx
+import { UserQueryProvider, updateUserState } from "./UserContextQueryProvider";
 
-function ParentComponent() {
+async function fetchUserData(userId: string) {
+  const response = await fetch(`/api/users/${userId}`);
+  return response.json();
+}
+
+function UserProfilePage({ userId }: { userId: string }) {
+  useEffect(() => {
+    // 외부 데이터로 상태 초기화
+    const loadUserData = async () => {
+      const userData = await fetchUserData(userId);
+      updateUserState(userData); // 가져온 데이터로 전체 상태 업데이트
+    };
+    loadUserData();
+  }, [userId]);
+
   return (
-    <CounterQueryProvider initialState={count1: 0, count2: 0}>
-      <ChildComponentA /> {/* count1이 변경될 때만 리렌더링 */}
-      <ChildComponentB /> {/* count2가 변경될 때만 리렌더링 */}
-    </CounterQueryProvider>
+    <UserQueryProvider>
+      <div className="user-profile">
+        <UserInfoForm />
+        <UserPreferencesForm />
+        <SaveButton />
+      </div>
+    </UserQueryProvider>
   );
 }
 ```
@@ -92,65 +127,153 @@ function ParentComponent() {
 ### 3. 컴포넌트에서 상태 사용하기
 
 ```tsx
-// ChildComponentA.tsx
-import { useCounterQuery } from "./CounterContextQueryProvider";
+// UserInfoForm.tsx
+import { useUserQuery } from "./UserContextQueryProvider";
 
-function ChildComponentA() {
-  const [count, setCount] = useCounterQuery("count1");
-
-  console.log("ChildComponentA 렌더링"); // count1이 변경될 때만 로그가 출력됩니다
-
-  const increment = () => {
-    setCount(count + 1);
-  };
+function UserInfoForm() {
+  // 사용자 정보 필드만 구독
+  const [state, setState] = useUserQuery(["name", "email"]);
 
   return (
-    <div>
-      <h2>카운터 A: {count}</h2>
-      <button onClick={increment}>+</button>
+    <div className="user-info">
+      <h3>기본 정보</h3>
+      <div>
+        <label>이름:</label>
+        <input
+          value={state.name}
+          onChange={(e) =>
+            setState((prev) => ({ ...prev, name: e.target.value }))
+          }
+        />
+      </div>
+      <div>
+        <label>이메일:</label>
+        <input
+          value={state.email}
+          onChange={(e) =>
+            setState((prev) => ({ ...prev, email: e.target.value }))
+          }
+        />
+      </div>
     </div>
   );
 }
 
-// ChildComponentB.tsx
-import { useCounterQuery } from "./CounterContextQueryProvider";
+// UserPreferencesForm.tsx
+import { useUserQuery } from "./UserContextQueryProvider";
 
-function ChildComponentB() {
-  const [count, setCount] = useCounterQuery("count2");
+function UserPreferencesForm() {
+  // preferences만 구독
+  const [state, setState] = useUserQuery(["preferences"]);
 
-  console.log("ChildComponentB 렌더링"); // count1이 변경될 때는 로그가 출력되지 않고, count2가 변경될 때만 출력됩니다
+  const toggleTheme = () => {
+    setState((prev) => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        theme: prev.preferences.theme === "light" ? "dark" : "light",
+      },
+    }));
+  };
 
-  const increment = () => {
-    setCount(count + 1);
+  const toggleNotifications = () => {
+    setState((prev) => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        notifications: !prev.preferences.notifications,
+      },
+    }));
   };
 
   return (
-    <div>
-      <h2>카운터 B: {count}</h2>
-      <button onClick={increment}>+</button>
+    <div className="user-preferences">
+      <h3>사용자 설정</h3>
+      <div>
+        <label>테마: {state.preferences.theme}</label>
+        <button onClick={toggleTheme}>테마 변경</button>
+      </div>
+      <div>
+        <label>
+          <input
+            type="checkbox"
+            checked={state.preferences.notifications}
+            onChange={toggleNotifications}
+          />
+          알림 활성화
+        </label>
+      </div>
     </div>
   );
+}
+
+// SaveButton.tsx
+import { useUserQuery, updateUserState } from "./UserContextQueryProvider";
+
+function SaveButton() {
+  // 저장을 위해 모든 사용자 데이터 가져오기
+  const [userData] = useUserQuery(["name", "email", "preferences"]);
+
+  const handleSave = async () => {
+    try {
+      const response = await fetch("/api/users/update", {
+        method: "POST",
+        body: JSON.stringify(userData),
+      });
+      const updatedUser = await response.json();
+
+      // 서버 응답으로 전체 상태 업데이트
+      updateUserState(updatedUser);
+    } catch (error) {
+      console.error("사용자 데이터 저장 실패:", error);
+    }
+  };
+
+  return <button onClick={handleSave}>변경사항 저장</button>;
 }
 ```
 
+이 예시는 다음을 보여줍니다:
+
+1. 사용자 정보와 환경설정을 별도의 컴포넌트로 분리하여 관심사를 분리
+2. 각 컴포넌트는 필요한 상태만 구독하여 리렌더링을 최적화
+3. 컴포넌트들이 독립적으로 자신의 관련 상태를 업데이트
+
 ## 고급 사용법
 
-### 함수 업데이트
+### 함수형 업데이트
 
-React의 `useState`와 유사하게 상태 설정자에 함수를 전달할 수 있습니다:
+React의 `useState`와 유사하게, 상태 설정자에 함수를 전달할 수 있습니다:
 
 ```tsx
-const [count, setCount] = useCounterQuery("count1");
+const [count, setCount] = useCounterQuery(["count1"]);
 
 // 이전 상태를 기반으로 업데이트
 const increment = () => {
   setCount((prevCount) => prevCount + 1);
 };
+// ...
 ```
 
-### 다중 Provider
+### 다중 상태 업데이트
 
-다른 컴포넌트 서브트리를 위해 여러 Provider를 사용할 수 있습니다:
+updateState 함수를 사용하여 여러 상태를 한 번에 업데이트할 수 있습니다:
+
+```tsx
+import { updateCounterState } from "./CounterContextQueryProvider";
+
+// 여러 상태를 한 번에 업데이트
+const resetCounters = () => {
+  updateCounterState({
+    count1: 0,
+    count2: 0,
+  });
+};
+```
+
+### 다중 프로바이더
+
+서로 다른 컴포넌트 트리에 대해 여러 프로바이더를 사용할 수 있습니다:
 
 ```tsx
 function App() {
@@ -174,7 +297,7 @@ function App() {
 
 - `@context-query/core`: 핵심 기능 및 상태 관리
 - `@context-query/react`: React 바인딩 및 훅
-- `playground`: 라이브러리를 보여주는 데모 애플리케이션
+- `playground`: 라이브러리 사용 예제 애플리케이션
 
 ## 개발
 
@@ -195,9 +318,6 @@ pnpm install
 
 # 모든 패키지 빌드
 pnpm build
-
-# 플레이그라운드 데모 실행
-pnpm playground
 ```
 
 ## 릴리즈 워크플로우
