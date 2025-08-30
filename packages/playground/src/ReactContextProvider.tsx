@@ -11,6 +11,8 @@ type CounterState = {
 type CounterContextType = {
   state: CounterState;
   setState: (key: keyof CounterState, value: number) => void;
+  setMultipleState: (updates: Partial<CounterState>) => void;
+  setFullState: (updater: (prevState: CounterState) => CounterState) => void;
 };
 
 // 초기 상태
@@ -34,8 +36,24 @@ export function ReactCounterProvider({ children }: { children: React.ReactNode }
     }));
   };
 
+  const setMultipleState = (updates: Partial<CounterState>) => {
+    setFullState(prevState => ({
+      ...prevState,
+      ...updates
+    }));
+  };
+
+  const setStateWithUpdater = (updater: (prevState: CounterState) => CounterState) => {
+    setFullState(updater);
+  };
+
   return (
-    <CounterContext.Provider value={{ state, setState }}>
+    <CounterContext.Provider value={{ 
+      state, 
+      setState, 
+      setMultipleState, 
+      setFullState: setStateWithUpdater 
+    }}>
       {children}
     </CounterContext.Provider>
   );
@@ -53,4 +71,19 @@ export function useReactCounterState(key: keyof CounterState): [number, (value: 
   const setValue = (newValue: number) => context.setState(key, newValue);
   
   return [value, setValue];
+}
+
+// 전체 상태 접근을 위한 커스텀 훅
+export function useReactCounterFullState(): [
+  CounterState,
+  (updates: Partial<CounterState>) => void,
+  (updater: (prevState: CounterState) => CounterState) => void
+] {
+  const context = useContext(CounterContext);
+  
+  if (context === undefined) {
+    throw new Error('useReactCounterFullState must be used within a ReactCounterProvider');
+  }
+  
+  return [context.state, context.setMultipleState, context.setFullState];
 }

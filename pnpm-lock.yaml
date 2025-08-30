@@ -47,8 +47,8 @@ importers:
   packages/playground:
     dependencies:
       '@context-query/react':
-        specifier: 0.1.0-dev.1
-        version: 0.1.0-dev.1(react@19.0.0)
+        specifier: 0.3.1-beta.1
+        version: 0.3.1-beta.1(react@19.0.0)
       '@radix-ui/react-slot':
         specifier: ^1.1.2
         version: 1.1.2(@types/react@19.0.10)(react@19.0.0)
@@ -129,8 +129,8 @@ importers:
   packages/react:
     dependencies:
       '@context-query/core':
-        specifier: 0.1.0-dev.1
-        version: 0.1.0-dev.1
+        specifier: 0.3.0-beta.1
+        version: 0.3.0-beta.1
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -228,11 +228,11 @@ packages:
     resolution: {integrity: sha512-emqcG3vHrpxUKTrxcblR36dcrcoRDvKmnL/dCL6ZsHaShW80qxCAcNhzQZrpeM765VzEos+xOi4s+r4IXzTwdQ==}
     engines: {node: '>=6.9.0'}
 
-  '@context-query/core@0.1.0-dev.1':
-    resolution: {integrity: sha512-BZR5vxtOz4zC27GXytmfsqrOLIFAeJWyDILaJ0HvlNXdKVp/ZOieuKF1N9YcsC1EMYuWeDfJMfV2w3F65DteGw==}
+  '@context-query/core@0.3.0-beta.1':
+    resolution: {integrity: sha512-buih8hyanLSC240qXdhq8jkV0I7lNbJskn9fVNFnd+0ZBRBoCdzcbyCzJBtxkl5bwEdxpGkgjXDuipKmO1rBeQ==}
 
-  '@context-query/react@0.1.0-dev.1':
-    resolution: {integrity: sha512-bAS7G+JUms/xykvvx6UCbit2/09RntfTVVLEwLPKuTypW1qrUM1QSlA4RB/ZY970YA+l2zjYFLumfKwRLt98eA==}
+  '@context-query/react@0.3.1-beta.1':
+    resolution: {integrity: sha512-Gcx+lBcxQjFekn3fGyGR0dBzPRzZsXVdWKJG2dqE4rsc6b6y+bpvGb9EaYXTGZhmvHJxuQ/MX49cDYSeaI7+4A==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
 
@@ -1719,11 +1719,11 @@ snapshots:
       '@babel/helper-string-parser': 7.25.9
       '@babel/helper-validator-identifier': 7.25.9
 
-  '@context-query/core@0.1.0-dev.1': {}
+  '@context-query/core@0.3.0-beta.1': {}
 
-  '@context-query/react@0.1.0-dev.1(react@19.0.0)':
+  '@context-query/react@0.3.1-beta.1(react@19.0.0)':
     dependencies:
-      '@context-query/core': 0.1.0-dev.1
+      '@context-query/core': 0.3.0-beta.1
       react: 19.0.0
 
   '@esbuild/aix-ppc64@0.25.1':

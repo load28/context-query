@@ -4,6 +4,7 @@ import { rcLogger } from "./LoggerInstance";
 import {
   ReactCounterProvider,
   useReactCounterState,
+  useReactCounterFullState,
 } from "./ReactContextProvider";
 
 function RCCounter3() {
@@ -50,13 +51,18 @@ function RCCounter3() {
 
 function RCCounter2() {
   const [state, setState] = useReactCounterState("count2");
+  const [, , setFullState] = useReactCounterFullState();
 
   useEffect(() => {
     rcLogger.log(`Counter2 컴포넌트 렌더링 - ${state}`);
   });
 
   const increment = () => {
-    setState(state + 1);
+    setFullState((prev) => ({
+      ...prev,
+      count2: prev.count2 + 1,
+      count3: prev.count3 + 1
+    }));
   };
 
   const decrement = () => {
@@ -94,21 +100,34 @@ function RCCounter2() {
 
 function RCCounter1() {
   const [state, setState] = useReactCounterState("count1");
+  const [, , setFullState] = useReactCounterFullState();
 
   useEffect(() => {
     rcLogger.log(`Counter1 컴포넌트 렌더링 - ${state}`);
   });
 
   const increment = () => {
-    setState(state + 1);
+    setFullState((prev) => ({
+      count1: prev.count1 + 1,
+      count2: prev.count2 + 1,
+      count3: prev.count3 + 1
+    }));
   };
 
   const decrement = () => {
-    setState(state - 1);
+    setFullState((prev) => ({
+      count1: prev.count1 - 1,
+      count2: prev.count2 - 1,
+      count3: prev.count3 - 1
+    }));
   };
 
   const reset = () => {
-    setState(0);
+    setFullState(() => ({
+      count1: 0,
+      count2: 0,
+      count3: 0
+    }));
   };
 
   return (

@@ -37,8 +37,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@context-query'
       
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -75,27 +73,18 @@ jobs:
           echo "Updated version to ${{ github.event.inputs.version }}"
       
       - name: Build package
-        run: |
-          cd packages/${{ github.event.inputs.package }}
-          pnpm run build
+        run: pnpm build --filter=@context-query/${{ github.event.inputs.package }}
       
-      - name: Configure npm authentication
-        run: |
-          echo "@context-query:registry=https://npm.pkg.github.com" >> ~/.npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGE_KEY }}" >> ~/.npmrc
-      
-      - name: Publish to GitHub Packages
+      - name: Publish to npm Registry
         run: |
           cd packages/${{ github.event.inputs.package }}
           if [[ "${{ github.event.inputs.prerelease }}" == "true" ]]; then
-            npm publish --tag prerelease
+            npm publish --tag prerelease --registry=https://registry.npmjs.org --//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
             echo "Published as prerelease with tag 'prerelease'"
           else
-            npm publish
+            npm publish --registry=https://registry.npmjs.org --//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
             echo "Published as latest"
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.PACKAGE_KEY }}
       
       - name: Commit version change
         if: github.event.inputs.prerelease == 'false'
@@ -125,7 +114,7 @@ jobs:
           body: |
             ## @context-query/${{ github.event.inputs.package }} v${{ github.event.inputs.version }}
             
-            Published to GitHub Packages.
+            Published to npm registry.
             
             ### Installation
             ```bash
