@@ -77,25 +77,18 @@ interface UserData {
 }
 
 export const {
-  Provider: UserQueryProvider,
+  ContextQueryProvider: UserQueryProvider,
   useContextQuery: useUserQuery,
-  updateState: updateUserState,
-  setState: setUserState,
-} = createContextQuery<UserData>({
-  name: "",
-  email: "",
-  preferences: {
-    theme: "light",
-    notifications: true,
-  },
-});
+  useContextSetter: useUserSetter,
+} = createContextQuery<UserData>();
 ```
 
 ### 2. Wrap Your Component Tree with the Provider and Initialize State
 
 ```tsx
 // UserProfilePage.tsx
-import { UserQueryProvider, updateUserState } from "./UserContextQueryProvider";
+import { useEffect } from "react";
+import { UserQueryProvider, useUserSetter } from "./UserContextQueryProvider";
 
 async function fetchUserData(userId: string) {
   const response = await fetch(`/api/users/${userId}`);
@@ -103,23 +96,40 @@ async function fetchUserData(userId: string) {
 }
 
 function UserProfilePage({ userId }: { userId: string }) {
+  const initialState = {
+    name: "",
+    email: "",
+    preferences: {
+      theme: "light" as const,
+      notifications: true,
+    },
+  };
+
+  return (
+    <UserQueryProvider initialState={initialState}>
+      <UserProfileContent userId={userId} />
+    </UserQueryProvider>
+  );
+}
+
+function UserProfileContent({ userId }: { userId: string }) {
+  const setUserState = useUserSetter();
+
   useEffect(() => {
     // Initialize state with external data
     const loadUserData = async () => {
       const userData = await fetchUserData(userId);
-      updateUserState(userData); // Update entire state with fetched data
+      setUserState(userData); // Update entire state with fetched data
     };
     loadUserData();
-  }, [userId]);
+  }, [userId, setUserState]);
 
   return (
-    <UserQueryProvider>
-      <div className="user-profile">
-        <UserInfoForm />
-        <UserPreferencesForm />
-        <SaveButton />
-      </div>
-    </UserQueryProvider>
+    <div className="user-profile">
+      <UserInfoForm />
+      <UserPreferencesForm />
+      <SaveButton />
+    </div>
   );
 }
 ```
@@ -208,11 +218,12 @@ function UserPreferencesForm() {
 }
 
 // SaveButton.tsx
-import { useUserQuery, updateUserState } from "./UserContextQueryProvider";
+import { useUserQuery, useUserSetter } from "./UserContextQueryProvider";
 
 function SaveButton() {
   // Get all user data for saving
   const [userData] = useUserQuery(["name", "email", "preferences"]);
+  const setUserState = useUserSetter();
 
   const handleSave = async () => {
     try {
@@ -223,7 +234,7 @@ function SaveButton() {
       const updatedUser = await response.json();
 
       // Update entire state with server response
-      updateUserState(updatedUser);
+      setUserState(updatedUser);
     } catch (error) {
       console.error("Failed to save user data:", error);
     }
@@ -246,33 +257,49 @@ This example demonstrates:
 Similar to React's `useState`, you can pass a function to the state setter:
 
 ```tsx
-const [count, setCount] = useCounterQuery(["count1"]);
+const [{ count1 }, setState] = useCounterQuery(["count1"]);
 
 // Update based on previous state
 const increment = () => {
-  setCount((prevCount) => prevCount + 1);
-};
-
-// Or use setState directly
-const incrementOutside = () => {
-  setCounterState("count1", (prev) => prev + 1);
+  setState((prev) => ({ ...prev, count1: prev.count1 + 1 }));
 };
 ```
 
 ### Update Multiple States
 
-You can update multiple states at once using the updateState function:
+You can update multiple states at once using the `useContextSetter` hook:
 
 ```tsx
-import { updateCounterState } from "./CounterContextQueryProvider";
+import { useCounterSetter } from "./CounterContextQueryProvider";
 
-// Update multiple states at once
-const resetCounters = () => {
-  updateCounterState({
-    count1: 0,
-    count2: 0,
-  });
-};
+function BatchUpdateComponent() {
+  const setState = useCounterSetter();
+
+  // Update multiple states at once
+  const resetCounters = () => {
+    setState({
+      count1: 0,
+      count2: 0,
+      count3: 0,
+    });
+  };
+
+  // Or use a function to update based on previous state
+  const incrementAll = () => {
+    setState((prev) => ({
+      count1: prev.count1 + 1,
+      count2: prev.count2 + 1,
+      count3: prev.count3 + 1,
+    }));
+  };
+
+  return (
+    <div>
+      <button onClick={resetCounters}>Reset All</button>
+      <button onClick={incrementAll}>Increment All</button>
+    </div>
+  );
+}
 ```
 
 ### Multiple Providers

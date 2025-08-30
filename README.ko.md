@@ -77,25 +77,18 @@ interface UserData {
 }
 
 export const {
-  Provider: UserQueryProvider,
+  ContextQueryProvider: UserQueryProvider,
   useContextQuery: useUserQuery,
-  updateState: updateUserState,
-  setState: setUserState,
-} = createContextQuery<UserData>({
-  name: "",
-  email: "",
-  preferences: {
-    theme: "light",
-    notifications: true,
-  },
-});
+  useContextSetter: useUserSetter,
+} = createContextQuery<UserData>();
 ```
 
 ### 2. Provider로 컴포넌트 트리 감싸기 및 상태 초기화
 
 ```tsx
 // UserProfilePage.tsx
-import { UserQueryProvider, updateUserState } from "./UserContextQueryProvider";
+import { useEffect } from "react";
+import { UserQueryProvider, useUserSetter } from "./UserContextQueryProvider";
 
 async function fetchUserData(userId: string) {
   const response = await fetch(`/api/users/${userId}`);
@@ -103,23 +96,40 @@ async function fetchUserData(userId: string) {
 }
 
 function UserProfilePage({ userId }: { userId: string }) {
+  const initialState = {
+    name: "",
+    email: "",
+    preferences: {
+      theme: "light" as const,
+      notifications: true,
+    },
+  };
+
+  return (
+    <UserQueryProvider initialState={initialState}>
+      <UserProfileContent userId={userId} />
+    </UserQueryProvider>
+  );
+}
+
+function UserProfileContent({ userId }: { userId: string }) {
+  const setUserState = useUserSetter();
+
   useEffect(() => {
     // 외부 데이터로 상태 초기화
     const loadUserData = async () => {
       const userData = await fetchUserData(userId);
-      updateUserState(userData); // 가져온 데이터로 전체 상태 업데이트
+      setUserState(userData); // 가져온 데이터로 전체 상태 업데이트
     };
     loadUserData();
-  }, [userId]);
+  }, [userId, setUserState]);
 
   return (
-    <UserQueryProvider>
-      <div className="user-profile">
-        <UserInfoForm />
-        <UserPreferencesForm />
-        <SaveButton />
-      </div>
-    </UserQueryProvider>
+    <div className="user-profile">
+      <UserInfoForm />
+      <UserPreferencesForm />
+      <SaveButton />
+    </div>
   );
 }
 ```
@@ -208,11 +218,12 @@ function UserPreferencesForm() {
 }
 
 // SaveButton.tsx
-import { useUserQuery, updateUserState } from "./UserContextQueryProvider";
+import { useUserQuery, useUserSetter } from "./UserContextQueryProvider";
 
 function SaveButton() {
   // 저장을 위해 모든 사용자 데이터 가져오기
   const [userData] = useUserQuery(["name", "email", "preferences"]);
+  const setUserState = useUserSetter();
 
   const handleSave = async () => {
     try {
@@ -223,7 +234,7 @@ function SaveButton() {
       const updatedUser = await response.json();
 
       // 서버 응답으로 전체 상태 업데이트
-      updateUserState(updatedUser);
+      setUserState(updatedUser);
     } catch (error) {
       console.error("사용자 데이터 저장 실패:", error);
     }
@@ -246,29 +257,49 @@ function SaveButton() {
 React의 `useState`와 유사하게, 상태 설정자에 함수를 전달할 수 있습니다:
 
 ```tsx
-const [count, setCount] = useCounterQuery(["count1"]);
+const [{ count1 }, setState] = useCounterQuery(["count1"]);
 
 // 이전 상태를 기반으로 업데이트
 const increment = () => {
-  setCount((prevCount) => prevCount + 1);
+  setState((prev) => ({ ...prev, count1: prev.count1 + 1 }));
 };
-// ...
 ```
 
 ### 다중 상태 업데이트
 
-updateState 함수를 사용하여 여러 상태를 한 번에 업데이트할 수 있습니다:
+`useContextSetter` 훅을 사용하여 여러 상태를 한 번에 업데이트할 수 있습니다:
 
 ```tsx
-import { updateCounterState } from "./CounterContextQueryProvider";
+import { useCounterSetter } from "./CounterContextQueryProvider";
 
-// 여러 상태를 한 번에 업데이트
-const resetCounters = () => {
-  updateCounterState({
-    count1: 0,
-    count2: 0,
-  });
-};
+function BatchUpdateComponent() {
+  const setState = useCounterSetter();
+
+  // 여러 상태를 한 번에 업데이트
+  const resetCounters = () => {
+    setState({
+      count1: 0,
+      count2: 0,
+      count3: 0,
+    });
+  };
+
+  // 이전 상태를 기반으로 업데이트하는 함수 사용
+  const incrementAll = () => {
+    setState((prev) => ({
+      count1: prev.count1 + 1,
+      count2: prev.count2 + 1,
+      count3: prev.count3 + 1,
+    }));
+  };
+
+  return (
+    <div>
+      <button onClick={resetCounters}>모두 초기화</button>
+      <button onClick={incrementAll}>모두 증가</button>
+    </div>
+  );
+}
 ```
 
 ### 다중 프로바이더
@@ -318,6 +349,9 @@ pnpm install
 
 # 모든 패키지 빌드
 pnpm build
+
+# 플레이그라운드 데모 실행
+pnpm playground
 ```
 
 ## 릴리즈 워크플로우
