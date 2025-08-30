@@ -1,0 +1,139 @@
+name: Publish Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to publish'
+        required: true
+        type: choice
+        options:
+          - core
+          - react
+      version:
+        description: 'Version to publish (e.g., 1.0.0 for release, 1.0.0-beta.1 for prerelease)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Is this a prerelease?'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PACKAGE_KEY }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@context-query'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9.0.0
+      
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+      
+      - name: Validate version format
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
+          
+          # Check if version matches prerelease setting
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            if ! [[ "$VERSION" =~ -([a-zA-Z]+)\.?[0-9]* ]]; then
+              echo "Error: Prerelease version must include a prerelease identifier (e.g., 1.0.0-beta.1, 1.0.0-alpha.1, 1.0.0-rc.1)"
+              exit 1
+            fi
+            echo "Valid prerelease version: $VERSION"
+          else
+            if [[ "$VERSION" =~ - ]]; then
+              echo "Error: Release version should not contain prerelease identifiers. Use format like 1.0.0"
+              exit 1
+            fi
+            echo "Valid release version: $VERSION"
+          fi
+      
+      - name: Update package version
+        run: |
+          cd packages/${{ github.event.inputs.package }}
+          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+          echo "Updated version to ${{ github.event.inputs.version }}"
+      
+      - name: Build package
+        run: |
+          cd packages/${{ github.event.inputs.package }}
+          pnpm run build
+      
+      - name: Configure npm authentication
+        run: |
+          echo "@context-query:registry=https://npm.pkg.github.com" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGE_KEY }}" >> ~/.npmrc
+      
+      - name: Publish to GitHub Packages
+        run: |
+          cd packages/${{ github.event.inputs.package }}
+          if [[ "${{ github.event.inputs.prerelease }}" == "true" ]]; then
+            npm publish --tag prerelease
+            echo "Published as prerelease with tag 'prerelease'"
+          else
+            npm publish
+            echo "Published as latest"
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.PACKAGE_KEY }}
+      
+      - name: Commit version change
+        if: github.event.inputs.prerelease == 'false'
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add packages/${{ github.event.inputs.package }}/package.json
+          git commit -m "chore: bump @context-query/${{ github.event.inputs.package }} to v${{ github.event.inputs.version }}"
+          git push
+      
+      - name: Create Git tag
+        if: github.event.inputs.prerelease == 'false'
+        run: |
+          TAG_NAME="${{ github.event.inputs.package }}-v${{ github.event.inputs.version }}"
+          git tag $TAG_NAME
+          git push origin $TAG_NAME
+          echo "Created tag: $TAG_NAME"
+      
+      - name: Create GitHub Release
+        if: github.event.inputs.prerelease == 'false'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PACKAGE_KEY }}
+        with:
+          tag_name: ${{ github.event.inputs.package }}-v${{ github.event.inputs.version }}
+          release_name: "@context-query/${{ github.event.inputs.package }} v${{ github.event.inputs.version }}"
+          body: |
+            ## @context-query/${{ github.event.inputs.package }} v${{ github.event.inputs.version }}
+            
+            Published to GitHub Packages.
+            
+            ### Installation
+            ```bash
+            # Install specific version
+            npm install @context-query/${{ github.event.inputs.package }}@${{ github.event.inputs.version }}
+            
+            # Install latest stable version
+            npm install @context-query/${{ github.event.inputs.package }}@latest
+            ```
+          draft: false
+          prerelease: false
