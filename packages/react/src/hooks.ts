@@ -1,14 +1,12 @@
 import { TStateImpl } from "@context-query/core";
 import { useCallback, useContext, useEffect, useState } from "react";
-import { createContextQuery } from "./context";
+import { createStoreContext } from "./context";
 
 export function createUseContextQuery<TState extends TStateImpl>(
-  contexts: ReturnType<typeof createContextQuery<TState>>
+  contexts: ReturnType<typeof createStoreContext<TState>>
 ) {
-  const { StoreContext } = contexts;
-
   const useStore = () => {
-    const store = useContext(StoreContext);
+    const store = useContext(contexts);
 
     if (!store) {
       throw new Error(
