@@ -8,30 +8,31 @@ import {
 } from "./ReactContextProvider";
 
 function RCCounter3() {
-  const [state, setState] = useReactCounterState("count3");
+  const [tertiaryCounter, setTertiaryCounter] = useReactCounterState("tertiaryCounter");
 
   useEffect(() => {
-    rcLogger.log(`Counter3 컴포넌트 렌더링 - ${state}`);
+    rcLogger.log(`${tertiaryCounter.name} 컴포넌트 렌더링 - ${tertiaryCounter.value}`);
   });
 
   const increment = () => {
-    setState(state + 1);
+    setTertiaryCounter({ value: tertiaryCounter.value + 1 });
   };
 
   const decrement = () => {
-    setState(state - 1);
+    setTertiaryCounter({ value: tertiaryCounter.value - 1 });
   };
 
   const reset = () => {
-    setState(0);
+    setTertiaryCounter({ value: 0 });
   };
 
   return (
     <div className="rounded-lg bg-card text-card-foreground shadow-sm mt-4 ml-8">
       <div className="p-6 space-y-4">
-        <h2 className="text-lg font-semibold">카운터 3</h2>
+        <h2 className="text-lg font-semibold">{tertiaryCounter.name}</h2>
+        <p className="text-sm text-muted-foreground">{tertiaryCounter.description}</p>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-2xl font-bold text-purple-600">{state}</span>
+          <span className="text-2xl font-bold text-purple-600">{tertiaryCounter.value}</span>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={decrement}>
               감소
@@ -50,36 +51,37 @@ function RCCounter3() {
 }
 
 function RCCounter2() {
-  const [state, setState] = useReactCounterState("count2");
+  const [secondaryCounter, setSecondaryCounter] = useReactCounterState("secondaryCounter");
   const [, , setFullState] = useReactCounterFullState();
 
   useEffect(() => {
-    rcLogger.log(`Counter2 컴포넌트 렌더링 - ${state}`);
+    rcLogger.log(`${secondaryCounter.name} 컴포넌트 렌더링 - ${secondaryCounter.value}`);
   });
 
   const increment = () => {
     setFullState((prev) => ({
       ...prev,
-      count2: prev.count2 + 1,
-      count3: prev.count3 + 1
+      secondaryCounter: { ...prev.secondaryCounter, value: prev.secondaryCounter.value + 1 },
+      tertiaryCounter: { ...prev.tertiaryCounter, value: prev.tertiaryCounter.value + 1 }
     }));
   };
 
   const decrement = () => {
-    setState(state - 1);
+    setSecondaryCounter({ value: secondaryCounter.value - 1 });
   };
 
   const reset = () => {
-    setState(0);
+    setSecondaryCounter({ value: 0 });
   };
 
   return (
     <div className="space-y-2">
       <div className="rounded-lg bg-card text-card-foreground shadow-sm mt-4 ml-4">
         <div className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">카운터 2</h2>
+          <h2 className="text-lg font-semibold">{secondaryCounter.name}</h2>
+          <p className="text-sm text-muted-foreground">{secondaryCounter.description}</p>
           <div className="flex items-center justify-between gap-4">
-            <span className="text-2xl font-bold text-green-600">{state}</span>
+            <span className="text-2xl font-bold text-green-600">{secondaryCounter.value}</span>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={decrement}>
                 감소
@@ -99,34 +101,34 @@ function RCCounter2() {
 }
 
 function RCCounter1() {
-  const [state, setState] = useReactCounterState("count1");
+  const [primaryCounter, setPrimaryCounter] = useReactCounterState("primaryCounter");
   const [, , setFullState] = useReactCounterFullState();
 
   useEffect(() => {
-    rcLogger.log(`Counter1 컴포넌트 렌더링 - ${state}`);
+    rcLogger.log(`${primaryCounter.name} 컴포넌트 렌더링 - ${primaryCounter.value}`);
   });
 
   const increment = () => {
     setFullState((prev) => ({
-      count1: prev.count1 + 1,
-      count2: prev.count2 + 1,
-      count3: prev.count3 + 1
+      primaryCounter: { ...prev.primaryCounter, value: prev.primaryCounter.value + 1 },
+      secondaryCounter: { ...prev.secondaryCounter, value: prev.secondaryCounter.value + 1 },
+      tertiaryCounter: { ...prev.tertiaryCounter, value: prev.tertiaryCounter.value + 1 }
     }));
   };
 
   const decrement = () => {
     setFullState((prev) => ({
-      count1: prev.count1 - 1,
-      count2: prev.count2 - 1,
-      count3: prev.count3 - 1
+      primaryCounter: { ...prev.primaryCounter, value: prev.primaryCounter.value - 1 },
+      secondaryCounter: { ...prev.secondaryCounter, value: prev.secondaryCounter.value - 1 },
+      tertiaryCounter: { ...prev.tertiaryCounter, value: prev.tertiaryCounter.value - 1 }
     }));
   };
 
   const reset = () => {
-    setFullState(() => ({
-      count1: 0,
-      count2: 0,
-      count3: 0
+    setFullState((prev) => ({
+      primaryCounter: { ...prev.primaryCounter, value: 0 },
+      secondaryCounter: { ...prev.secondaryCounter, value: 0 },
+      tertiaryCounter: { ...prev.tertiaryCounter, value: 0 }
     }));
   };
 
@@ -134,9 +136,10 @@ function RCCounter1() {
     <div className="space-y-2">
       <div className="rounded-lg bg-card text-card-foreground shadow-sm">
         <div className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">카운터 1</h2>
+          <h2 className="text-lg font-semibold">{primaryCounter.name}</h2>
+          <p className="text-sm text-muted-foreground">{primaryCounter.description}</p>
           <div className="flex items-center justify-between gap-4">
-            <span className="text-2xl font-bold text-blue-600">{state}</span>
+            <span className="text-2xl font-bold text-blue-600">{primaryCounter.value}</span>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={decrement}>
                 감소

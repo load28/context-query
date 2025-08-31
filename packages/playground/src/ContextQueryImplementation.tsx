@@ -2,37 +2,44 @@ import { useEffect } from "react";
 import { Button } from "./components/ui/button";
 import {
   CounterQueryProvider,
-  useCounterQuery,
-  useCounterSetter,
+  useCounterAtom,
+  useCounterSetAtom,
 } from "./CounterContextQueryProvider";
 import { cqLogger } from "./LoggerInstance";
 
 function CQCounter3() {
-  const [{ count3 }] = useCounterQuery(["count3"]);
-  const setState = useCounterSetter();
+  const [tertiaryCounter, setTertiaryCounter] =
+    useCounterAtom("tertiaryCounter");
 
   useEffect(() => {
-    cqLogger.log(`Counter3 컴포넌트 렌더링 - ${count3}`);
+    cqLogger.log(
+      `${tertiaryCounter.name} 컴포넌트 렌더링 - ${tertiaryCounter.value}`
+    );
   });
 
   const increment = () => {
-    setState((prev) => ({ ...prev, count3: prev.count3 + 1 }));
+    setTertiaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
   };
 
   const decrement = () => {
-    setState((prev) => ({ ...prev, count3: prev.count3 - 1 }));
+    setTertiaryCounter((prev) => ({ ...prev, value: prev.value - 1 }));
   };
 
   const reset = () => {
-    setState((prev) => ({ ...prev, count3: 0 }));
+    setTertiaryCounter((prev) => ({ ...prev, value: 0 }));
   };
 
   return (
     <div className="rounded-lg bg-card text-card-foreground shadow-sm mt-4 ml-8">
       <div className="p-6 space-y-4">
-        <h2 className="text-lg font-semibold">카운터 3</h2>
+        <h2 className="text-lg font-semibold">{tertiaryCounter.name}</h2>
+        <p className="text-sm text-muted-foreground">
+          {tertiaryCounter.description}
+        </p>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-2xl font-bold text-purple-600">{count3}</span>
+          <span className="text-2xl font-bold text-purple-600">
+            {tertiaryCounter.value}
+          </span>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={decrement}>
               감소
@@ -51,36 +58,41 @@ function CQCounter3() {
 }
 
 function CQCounter2() {
-  const [{ count2 }] = useCounterQuery(["count2"]);
-  const setState = useCounterSetter();
+  const [secondaryCounter, setSecondaryCounter] =
+    useCounterAtom("secondaryCounter");
+  const setTertiaryCounter = useCounterSetAtom("tertiaryCounter");
 
   useEffect(() => {
-    cqLogger.log(`Counter2 컴포넌트 렌더링 - ${count2}`);
+    cqLogger.log(
+      `${secondaryCounter.name} 컴포넌트 렌더링 - ${secondaryCounter.value}`
+    );
   });
 
   const increment = () => {
-    setState((prev) => ({ 
-      ...prev, 
-      count2: prev.count2 + 1,
-      count3: prev.count3 + 1
-    }));
+    setSecondaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
+    setTertiaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
   };
 
   const decrement = () => {
-    setState((prev) => ({ ...prev, count2: prev.count2 - 1 }));
+    setSecondaryCounter((prev) => ({ ...prev, value: prev.value - 1 }));
   };
 
   const reset = () => {
-    setState((prev) => ({ ...prev, count2: 0 }));
+    setSecondaryCounter((prev) => ({ ...prev, value: 0 }));
   };
 
   return (
     <div className="space-y-2">
       <div className="rounded-lg bg-card text-card-foreground shadow-sm mt-4 ml-4">
         <div className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">카운터 2</h2>
+          <h2 className="text-lg font-semibold">{secondaryCounter.name}</h2>
+          <p className="text-sm text-muted-foreground">
+            {secondaryCounter.description}
+          </p>
           <div className="flex items-center justify-between gap-4">
-            <span className="text-2xl font-bold text-green-600">{count2}</span>
+            <span className="text-2xl font-bold text-green-600">
+              {secondaryCounter.value}
+            </span>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={decrement}>
                 감소
@@ -100,49 +112,46 @@ function CQCounter2() {
 }
 
 const CQCounter1 = () => {
-  // count1만 구독하여 리렌더링 대상으로 설정
-  const [{ count1 }] = useCounterQuery(["count1"]);
-  
-  // 전체 상태 업데이트용 setter
-  const setState = useCounterSetter();
+  const [primaryCounter, setPrimaryCounter] = useCounterAtom("primaryCounter");
+
+  const setSecondaryCounter = useCounterSetAtom("secondaryCounter");
+  const setTertiaryCounter = useCounterSetAtom("tertiaryCounter");
 
   useEffect(() => {
-    cqLogger.log(`Counter1 컴포넌트 렌더링 - ${count1}`);
+    cqLogger.log(
+      `${primaryCounter.name} 컴포넌트 렌더링 - ${primaryCounter.value}`
+    );
   });
 
   const increment = () => {
-    // 전체 상태를 한번에 업데이트
-    setState((prev) => ({
-      count1: prev.count1 + 1,
-      count2: prev.count2 + 1,
-      count3: prev.count3 + 1
-    }));
+    setPrimaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
+    setSecondaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
+    setTertiaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
   };
 
   const decrement = () => {
-    setState((prev) => ({
-      count1: prev.count1 - 1,
-      count2: prev.count2 - 1,
-      count3: prev.count3 - 1
-    }));
+    setPrimaryCounter((prev) => ({ ...prev, value: prev.value - 1 }));
+    setSecondaryCounter((prev) => ({ ...prev, value: prev.value - 1 }));
+    setTertiaryCounter((prev) => ({ ...prev, value: prev.value - 1 }));
   };
 
   const reset = () => {
-    setState({
-      count1: 0,
-      count2: 0,
-      count3: 0
-    });
+    setPrimaryCounter((prev) => ({ ...prev, value: 0 }));
+    setSecondaryCounter((prev) => ({ ...prev, value: 0 }));
+    setTertiaryCounter((prev) => ({ ...prev, value: 0 }));
   };
 
   return (
     <div className="space-y-2">
       <div className="rounded-lg bg-card text-card-foreground shadow-sm">
         <div className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">카운터 1</h2>
+          <h2 className="text-lg font-semibold">{primaryCounter.name}</h2>
+          <p className="text-sm text-muted-foreground">
+            {primaryCounter.description}
+          </p>
           <div className="flex items-center justify-between gap-4">
             <span className="text-2xl font-bold text-blue-600">
-              {count1}
+              {primaryCounter.value}
             </span>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={decrement}>
@@ -165,7 +174,27 @@ const CQCounter1 = () => {
 export function ContextQueryImplementation() {
   return (
     <div>
-      <CounterQueryProvider initialState={{ count1: 0, count2: 0, count3: 0 }}>
+      <CounterQueryProvider
+        atoms={{
+          primaryCounter: {
+            name: "메인 카운터",
+            value: 0,
+            description: "모든 카운터를 제어하는 메인 카운터입니다",
+            dependencies: ["secondaryCounter", "tertiaryCounter"],
+          },
+          secondaryCounter: {
+            name: "보조 카운터",
+            value: 0,
+            description:
+              "메인 카운터와 연동되며 서드 카운터도 함께 증가시킵니다",
+          },
+          tertiaryCounter: {
+            name: "서드 카운터",
+            value: 0,
+            description: "독립적으로 동작하는 카운터입니다",
+          },
+        }}
+      >
         <div className="rounded-lg bg-card text-card-foreground shadow-sm p-4">
           <h2 className="text-xl font-bold mb-2">Context Query 버전</h2>
           <p className="text-muted-foreground mb-4">

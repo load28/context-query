@@ -47,8 +47,8 @@ importers:
   packages/playground:
     dependencies:
       '@context-query/react':
-        specifier: 0.3.1-beta.1
-        version: 0.3.1-beta.1(react@19.0.0)
+        specifier: 0.3.2-beta.1
+        version: 0.3.2-beta.1(react@19.0.0)
       '@radix-ui/react-slot':
         specifier: ^1.1.2
         version: 1.1.2(@types/react@19.0.10)(react@19.0.0)
@@ -228,14 +228,11 @@ packages:
     resolution: {integrity: sha512-emqcG3vHrpxUKTrxcblR36dcrcoRDvKmnL/dCL6ZsHaShW80qxCAcNhzQZrpeM765VzEos+xOi4s+r4IXzTwdQ==}
     engines: {node: '>=6.9.0'}
 
-  '@context-query/core@0.3.0-beta.1':
-    resolution: {integrity: sha512-buih8hyanLSC240qXdhq8jkV0I7lNbJskn9fVNFnd+0ZBRBoCdzcbyCzJBtxkl5bwEdxpGkgjXDuipKmO1rBeQ==}
-
   '@context-query/core@0.3.2-beta.1':
     resolution: {integrity: sha512-yX06LNmoXvJm87+kLtrEEXvXU+0TymhhfqbMloD5IRrHeQDwQNC9LsDuflasoJnlnvOOrSkGdtUJ4uylYYhbRA==}
 
-  '@context-query/react@0.3.1-beta.1':
-    resolution: {integrity: sha512-Gcx+lBcxQjFekn3fGyGR0dBzPRzZsXVdWKJG2dqE4rsc6b6y+bpvGb9EaYXTGZhmvHJxuQ/MX49cDYSeaI7+4A==}
+  '@context-query/react@0.3.2-beta.1':
+    resolution: {integrity: sha512-8JLkSlfxzigo9NZIlHTMNIaDt5VdicRa5vHJ7NDlEai7ybJTEDUzA/EeQfQudzg9P8dyq/dtzjcO7CKwJd86bQ==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
 
@@ -1722,13 +1719,11 @@ snapshots:
       '@babel/helper-string-parser': 7.25.9
       '@babel/helper-validator-identifier': 7.25.9
 
-  '@context-query/core@0.3.0-beta.1': {}
-
   '@context-query/core@0.3.2-beta.1': {}
 
-  '@context-query/react@0.3.1-beta.1(react@19.0.0)':
+  '@context-query/react@0.3.2-beta.1(react@19.0.0)':
     dependencies:
-      '@context-query/core': 0.3.0-beta.1
+      '@context-query/core': 0.3.2-beta.1
       react: 19.0.0
 
   '@esbuild/aix-ppc64@0.25.1':
