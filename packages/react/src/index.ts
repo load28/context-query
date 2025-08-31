@@ -1,15 +1,22 @@
-import { TStateImpl } from "@context-query/core";
-import { createUseContextQuery, createUseContextSetter } from "./hooks";
+import { 
+  createUseContextAtom, 
+  createUseContextAtomValue, 
+  createUseContextSetAtom 
+} from "./hooks";
 import { createReactContextQuery } from "./provider";
 
-export function createContextQuery<TState extends TStateImpl>() {
+export function createContextQuery<TAtoms extends Record<string, any>>() {
   const { ContextQueryProvider, StoreContext } =
-    createReactContextQuery<TState>();
-  const useContextQuery = createUseContextQuery<TState>(StoreContext);
-  const useContextSetter = createUseContextSetter<TState>(StoreContext);
+    createReactContextQuery<TAtoms>();
+  
+  const useContextAtom = createUseContextAtom<TAtoms>(StoreContext);
+  const useContextAtomValue = createUseContextAtomValue<TAtoms>(StoreContext);
+  const useContextSetAtom = createUseContextSetAtom<TAtoms>(StoreContext);
+  
   return {
     ContextQueryProvider,
-    useContextQuery,
-    useContextSetter,
+    useContextAtom,
+    useContextAtomValue,
+    useContextSetAtom,
   };
 }

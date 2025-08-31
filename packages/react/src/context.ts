@@ -1,6 +1,6 @@
-import type { ContextQueryStore, TStateImpl } from "@context-query/core";
+import type { ContextQueryStore } from "@context-query/core";
 import { createContext } from "react";
 
-export const createStoreContext = <TState extends TStateImpl>() => {
-  return createContext<ContextQueryStore<TState> | null>(null);
+export const createStoreContext = <TAtoms extends Record<string, any>>() => {
+  return createContext<ContextQueryStore<TAtoms> | null>(null);
 };

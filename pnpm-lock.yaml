@@ -129,8 +129,8 @@ importers:
   packages/react:
     dependencies:
       '@context-query/core':
-        specifier: 0.3.0-beta.1
-        version: 0.3.0-beta.1
+        specifier: 0.3.2-beta.1
+        version: 0.3.2-beta.1
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -230,6 +230,9 @@ packages:
 
   '@context-query/core@0.3.0-beta.1':
     resolution: {integrity: sha512-buih8hyanLSC240qXdhq8jkV0I7lNbJskn9fVNFnd+0ZBRBoCdzcbyCzJBtxkl5bwEdxpGkgjXDuipKmO1rBeQ==}
+
+  '@context-query/core@0.3.2-beta.1':
+    resolution: {integrity: sha512-yX06LNmoXvJm87+kLtrEEXvXU+0TymhhfqbMloD5IRrHeQDwQNC9LsDuflasoJnlnvOOrSkGdtUJ4uylYYhbRA==}
 
   '@context-query/react@0.3.1-beta.1':
     resolution: {integrity: sha512-Gcx+lBcxQjFekn3fGyGR0dBzPRzZsXVdWKJG2dqE4rsc6b6y+bpvGb9EaYXTGZhmvHJxuQ/MX49cDYSeaI7+4A==}
@@ -1720,6 +1723,8 @@ snapshots:
       '@babel/helper-validator-identifier': 7.25.9
 
   '@context-query/core@0.3.0-beta.1': {}
+
+  '@context-query/core@0.3.2-beta.1': {}
 
   '@context-query/react@0.3.1-beta.1(react@19.0.0)':
     dependencies:

@@ -1,89 +1,112 @@
-import { TStateImpl } from "@context-query/core";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { createStoreContext } from "./context";
 
-export function createUseContextQuery<TState extends TStateImpl>(
-  contexts: ReturnType<typeof createStoreContext<TState>>
+export function createUseContextAtom<TAtoms extends Record<string, any>>(
+  StoreContext: ReturnType<typeof createStoreContext<TAtoms>>
 ) {
   const useStore = () => {
-    const store = useContext(contexts);
+    const store = useContext(StoreContext);
 
     if (!store) {
       throw new Error(
-        "useContextQuery must be used within a ContextQueryProvider"
+        "useContextAtom must be used within a ContextQueryProvider"
       );
     }
 
     return store;
   };
 
-  return <TKey extends keyof TState>(keys?: TKey[]) => {
+  return <TKey extends keyof TAtoms>(key: TKey) => {
     const store = useStore();
-    const localKeys = keys ?? (Object.keys(store.getState()) as TKey[]);
-
-    type StateSubset = { [K in TKey]: TState[K] };
-
-    const getStateSubset = (): StateSubset => {
-      return localKeys.reduce(
-        (acc, key) => ({ ...acc, [key]: store.getStateByKey(key) }),
-        {} as StateSubset
-      );
-    };
-
-    const [state, setLocalState] = useState<StateSubset>(getStateSubset);
+    const [value, setValue] = useState<TAtoms[TKey]>(() => store.getAtomValue(key));
 
     useEffect(() => {
-      const handleChange = (key: TKey, newValue: TState[TKey]) => {
-        setLocalState((prev) => ({ ...prev, [key]: newValue }));
+      const handleChange = (_: TKey, newValue: TAtoms[TKey]) => {
+        setValue(newValue);
       };
 
-      const subscriptions = localKeys.map((key) =>
-        store.subscribe(key, handleChange)
-      );
+      const subscription = store.subscribeToAtom(key, handleChange);
 
       return () => {
-        subscriptions.forEach((sub) => sub.unsubscribe());
+        subscription.unsubscribe();
       };
-    }, [localKeys, store]);
+    }, [key, store]);
 
-    const setState = useCallback(
-      (value: StateSubset | ((prev: StateSubset) => StateSubset)) => {
-        const currentValue = getStateSubset();
-        const updatedValue =
-          typeof value === "function"
-            ? (value as Function)(currentValue)
-            : value;
+    const setAtom = useCallback((newValue: TAtoms[TKey] | ((prev: TAtoms[TKey]) => TAtoms[TKey])) => {
+      const currentValue = store.getAtomValue(key);
+      const updatedValue = typeof newValue === "function" 
+        ? (newValue as Function)(currentValue) 
+        : newValue;
+      
+      store.setAtomValue(key, updatedValue);
+    }, [key, store]);
 
-        Object.entries(updatedValue).forEach(([k, v]) => {
-          store.setState(k as TKey, v as TState[TKey]);
-        });
-      },
-      [localKeys, store]
-    );
-
-    return [state, setState] as const;
+    return [value, setAtom] as const;
   };
 }
 
-export function createUseContextSetter<TState extends TStateImpl>(
-  StoreContext: ReturnType<typeof createStoreContext<TState>>
+export function createUseContextAtomValue<TAtoms extends Record<string, any>>(
+  StoreContext: ReturnType<typeof createStoreContext<TAtoms>>
 ) {
-  return () => {
+  const useStore = () => {
     const store = useContext(StoreContext);
-    
+
     if (!store) {
-      throw new Error("useContextSetter must be used within a ContextQueryProvider");
+      throw new Error(
+        "useContextAtomValue must be used within a ContextQueryProvider"
+      );
     }
-    
-    const setState = useCallback((updater: Partial<TState> | ((prev: TState) => Partial<TState>)) => {
-      const currentState = store.getState();
-      const newState = typeof updater === 'function' ? updater(currentState) : updater;
+
+    return store;
+  };
+
+  return <TKey extends keyof TAtoms>(key: TKey): TAtoms[TKey] => {
+    const store = useStore();
+    const [value, setValue] = useState<TAtoms[TKey]>(() => store.getAtomValue(key));
+
+    useEffect(() => {
+      const handleChange = (_: TKey, newValue: TAtoms[TKey]) => {
+        setValue(newValue);
+      };
+
+      const subscription = store.subscribeToAtom(key, handleChange);
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }, [key, store]);
+
+    return value;
+  };
+}
+
+export function createUseContextSetAtom<TAtoms extends Record<string, any>>(
+  StoreContext: ReturnType<typeof createStoreContext<TAtoms>>
+) {
+  const useStore = () => {
+    const store = useContext(StoreContext);
+
+    if (!store) {
+      throw new Error(
+        "useContextSetAtom must be used within a ContextQueryProvider"
+      );
+    }
+
+    return store;
+  };
+
+  return <TKey extends keyof TAtoms>(
+    key: TKey
+  ): ((value: TAtoms[TKey] | ((prev: TAtoms[TKey]) => TAtoms[TKey])) => void) => {
+    const store = useStore();
+
+    return useCallback((newValue: TAtoms[TKey] | ((prev: TAtoms[TKey]) => TAtoms[TKey])) => {
+      const currentValue = store.getAtomValue(key);
+      const updatedValue = typeof newValue === "function" 
+        ? (newValue as Function)(currentValue) 
+        : newValue;
       
-      Object.entries(newState).forEach(([key, value]) => {
-        store.setState(key as keyof TState, value as TState[keyof TState]);
-      });
-    }, [store]);
-    
-    return setState;
+      store.setAtomValue(key, updatedValue);
+    }, [key, store]);
   };
 }
