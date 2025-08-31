@@ -64,263 +64,264 @@ pnpm add @context-query/react
 ### 1. Create a Context Query Provider
 
 ```tsx
-// UserContextQueryProvider.tsx
+// CounterContextQueryProvider.tsx
 import { createContextQuery } from "@context-query/react";
 
-interface UserData {
-  name: string;
-  email: string;
-  preferences: {
-    theme: "light" | "dark";
-    notifications: boolean;
+type CounterAtoms = {
+  primaryCounter: {
+    name: string;
+    value: number;
+    description: string;
   };
-}
+  secondaryCounter: {
+    name: string;
+    value: number;
+    description: string;
+  };
+};
 
 export const {
-  ContextQueryProvider: UserQueryProvider,
-  useContextQuery: useUserQuery,
-  useContextSetter: useUserSetter,
-} = createContextQuery<UserData>();
+  ContextQueryProvider: CounterQueryProvider,
+  useContextAtom: useCounterAtom,
+  useContextAtomValue: useCounterAtomValue,
+  useContextSetAtom: useCounterSetAtom,
+} = createContextQuery<CounterAtoms>();
 ```
 
-### 2. Wrap Your Component Tree with the Provider and Initialize State
+### 2. Wrap Your Component Tree with the Provider and Initialize Atoms
 
 ```tsx
-// UserProfilePage.tsx
-import { useEffect } from "react";
-import { UserQueryProvider, useUserSetter } from "./UserContextQueryProvider";
+// CounterApp.tsx
+import { CounterQueryProvider } from "./CounterContextQueryProvider";
 
-async function fetchUserData(userId: string) {
-  const response = await fetch(`/api/users/${userId}`);
-  return response.json();
-}
-
-function UserProfilePage({ userId }: { userId: string }) {
-  const initialState = {
-    name: "",
-    email: "",
-    preferences: {
-      theme: "light" as const,
-      notifications: true,
-    },
-  };
-
+function CounterApp() {
   return (
-    <UserQueryProvider initialState={initialState}>
-      <UserProfileContent userId={userId} />
-    </UserQueryProvider>
+    <CounterQueryProvider
+      atoms={{
+        primaryCounter: {
+          name: "Primary Counter",
+          value: 0,
+          description: "Main counter that controls other counters",
+        },
+        secondaryCounter: {
+          name: "Secondary Counter",
+          value: 0,
+          description: "Secondary counter linked to primary",
+        },
+      }}
+    >
+      <CounterContent />
+    </CounterQueryProvider>
   );
 }
 
-function UserProfileContent({ userId }: { userId: string }) {
-  const setUserState = useUserSetter();
-
-  useEffect(() => {
-    // Initialize state with external data
-    const loadUserData = async () => {
-      const userData = await fetchUserData(userId);
-      setUserState(userData); // Update entire state with fetched data
-    };
-    loadUserData();
-  }, [userId, setUserState]);
-
+function CounterContent() {
   return (
-    <div className="user-profile">
-      <UserInfoForm />
-      <UserPreferencesForm />
-      <SaveButton />
+    <div className="counter-app">
+      <PrimaryCounterComponent />
+      <SecondaryCounterComponent />
     </div>
   );
 }
 ```
 
-### 3. Use the State in Your Components
+### 3. Use Atoms in Your Components
 
 ```tsx
-// UserInfoForm.tsx
-import { useUserQuery } from "./UserContextQueryProvider";
+// PrimaryCounterComponent.tsx
+import { useCounterAtom, useCounterSetAtom } from "./CounterContextQueryProvider";
 
-function UserInfoForm() {
-  // Subscribe to user info fields only
-  const [state, setState] = useUserQuery(["name", "email"]);
+function PrimaryCounterComponent() {
+  // Subscribe to primary counter atom only
+  const [primaryCounter, setPrimaryCounter] = useCounterAtom("primaryCounter");
+  const setSecondaryCounter = useCounterSetAtom("secondaryCounter");
+
+  const increment = () => {
+    setPrimaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
+    // Also update secondary counter
+    setSecondaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
+  };
+
+  const decrement = () => {
+    setPrimaryCounter((prev) => ({ ...prev, value: prev.value - 1 }));
+  };
+
+  const reset = () => {
+    setPrimaryCounter((prev) => ({ ...prev, value: 0 }));
+  };
 
   return (
-    <div className="user-info">
-      <h3>Basic Information</h3>
-      <div>
-        <label>Name:</label>
-        <input
-          value={state.name}
-          onChange={(e) =>
-            setState((prev) => ({ ...prev, name: e.target.value }))
-          }
-        />
-      </div>
-      <div>
-        <label>Email:</label>
-        <input
-          value={state.email}
-          onChange={(e) =>
-            setState((prev) => ({ ...prev, email: e.target.value }))
-          }
-        />
+    <div className="counter">
+      <h2>{primaryCounter.name}</h2>
+      <p>{primaryCounter.description}</p>
+      <div className="counter-controls">
+        <span>{primaryCounter.value}</span>
+        <button onClick={decrement}>-</button>
+        <button onClick={increment}>+</button>
+        <button onClick={reset}>Reset</button>
       </div>
     </div>
   );
 }
 
-// UserPreferencesForm.tsx
-import { useUserQuery } from "./UserContextQueryProvider";
+// SecondaryCounterComponent.tsx
+import { useCounterAtomValue } from "./CounterContextQueryProvider";
 
-function UserPreferencesForm() {
-  // Subscribe to preferences only
-  const [state, setState] = useUserQuery(["preferences"]);
-
-  const toggleTheme = () => {
-    setState((prev) => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        theme: prev.preferences.theme === "light" ? "dark" : "light",
-      },
-    }));
-  };
-
-  const toggleNotifications = () => {
-    setState((prev) => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        notifications: !prev.preferences.notifications,
-      },
-    }));
-  };
+function SecondaryCounterComponent() {
+  // Read-only access to secondary counter atom
+  const secondaryCounter = useCounterAtomValue("secondaryCounter");
 
   return (
-    <div className="user-preferences">
-      <h3>User Preferences</h3>
-      <div>
-        <label>Theme: {state.preferences.theme}</label>
-        <button onClick={toggleTheme}>Toggle Theme</button>
-      </div>
-      <div>
-        <label>
-          <input
-            type="checkbox"
-            checked={state.preferences.notifications}
-            onChange={toggleNotifications}
-          />
-          Enable Notifications
-        </label>
+    <div className="counter secondary">
+      <h3>{secondaryCounter.name}</h3>
+      <p>{secondaryCounter.description}</p>
+      <div className="counter-display">
+        <span>{secondaryCounter.value}</span>
       </div>
     </div>
   );
 }
 
-// SaveButton.tsx
-import { useUserQuery, useUserSetter } from "./UserContextQueryProvider";
+// BatchUpdateComponent.tsx
+import { useCounterSetAtom } from "./CounterContextQueryProvider";
 
-function SaveButton() {
-  // Get all user data for saving
-  const [userData] = useUserQuery(["name", "email", "preferences"]);
-  const setUserState = useUserSetter();
+function BatchUpdateComponent() {
+  const setPrimaryCounter = useCounterSetAtom("primaryCounter");
+  const setSecondaryCounter = useCounterSetAtom("secondaryCounter");
 
-  const handleSave = async () => {
-    try {
-      const response = await fetch("/api/users/update", {
-        method: "POST",
-        body: JSON.stringify(userData),
-      });
-      const updatedUser = await response.json();
-
-      // Update entire state with server response
-      setUserState(updatedUser);
-    } catch (error) {
-      console.error("Failed to save user data:", error);
-    }
+  const resetAll = () => {
+    setPrimaryCounter((prev) => ({ ...prev, value: 0 }));
+    setSecondaryCounter((prev) => ({ ...prev, value: 0 }));
   };
 
-  return <button onClick={handleSave}>Save Changes</button>;
+  const incrementAll = () => {
+    setPrimaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
+    setSecondaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
+  };
+
+  return (
+    <div className="batch-controls">
+      <button onClick={resetAll}>Reset All Counters</button>
+      <button onClick={incrementAll}>Increment All Counters</button>
+    </div>
+  );
 }
 ```
 
 This example demonstrates:
 
-1. Separation of concerns by splitting user information and preferences into separate components
-2. Each component subscribes only to the state it needs, optimizing re-renders
-3. Components can independently update their relevant portions of the state
+1. **Atom-based Architecture**: Each piece of state is managed as a separate atom
+2. **Granular Subscriptions**: Components subscribe only to the atoms they need, optimizing re-renders
+3. **Read-Write Separation**: Use `useContextAtom` for read-write access, `useContextAtomValue` for read-only access, and `useContextSetAtom` for write-only access
+4. **Cross-Atom Updates**: Components can update multiple atoms independently
 
 ## Advanced Usage
 
-### Function Updates
+### Available Hooks
 
-Similar to React's `useState`, you can pass a function to the state setter:
+The `createContextQuery` function returns three hooks for different use cases:
 
 ```tsx
-const [{ count1 }, setState] = useCounterQuery(["count1"]);
-
-// Update based on previous state
-const increment = () => {
-  setState((prev) => ({ ...prev, count1: prev.count1 + 1 }));
-};
+const {
+  ContextQueryProvider,
+  useContextAtom,        // Read-write access to an atom
+  useContextAtomValue,   // Read-only access to an atom
+  useContextSetAtom,     // Write-only access to an atom
+} = createContextQuery<YourAtomTypes>();
 ```
 
-### Update Multiple States
+### Hook Usage Patterns
 
-You can update multiple states at once using the `useContextSetter` hook:
-
+#### `useContextAtom` - Read & Write
 ```tsx
-import { useCounterSetter } from "./CounterContextQueryProvider";
-
-function BatchUpdateComponent() {
-  const setState = useCounterSetter();
-
-  // Update multiple states at once
-  const resetCounters = () => {
-    setState({
-      count1: 0,
-      count2: 0,
-      count3: 0,
-    });
+function CounterComponent() {
+  const [counter, setCounter] = useContextAtom("counter");
+  
+  const increment = () => {
+    setCounter((prev) => ({ ...prev, value: prev.value + 1 }));
   };
-
-  // Or use a function to update based on previous state
-  const incrementAll = () => {
-    setState((prev) => ({
-      count1: prev.count1 + 1,
-      count2: prev.count2 + 1,
-      count3: prev.count3 + 1,
-    }));
-  };
-
+  
   return (
     <div>
-      <button onClick={resetCounters}>Reset All</button>
-      <button onClick={incrementAll}>Increment All</button>
+      <span>{counter.value}</span>
+      <button onClick={increment}>+</button>
     </div>
   );
 }
 ```
 
+#### `useContextAtomValue` - Read Only
+```tsx
+function DisplayComponent() {
+  const counter = useContextAtomValue("counter");
+  
+  return <div>Current value: {counter.value}</div>;
+}
+```
+
+#### `useContextSetAtom` - Write Only
+```tsx
+function ControlComponent() {
+  const setCounter = useContextSetAtom("counter");
+  
+  const reset = () => {
+    setCounter((prev) => ({ ...prev, value: 0 }));
+  };
+  
+  return <button onClick={reset}>Reset</button>;
+}
+```
+
+### Function Updates
+
+Similar to React's `useState`, you can pass a function to atom setters:
+
+```tsx
+const [counter, setCounter] = useContextAtom("counter");
+
+// Update based on previous state
+const increment = () => {
+  setCounter((prev) => ({ ...prev, value: prev.value + 1 }));
+};
+```
+
 ### Multiple Providers
 
-You can use multiple providers for different component subtrees:
+Using the same provider multiple times creates independent state instances:
 
 ```tsx
 function App() {
   return (
     <div>
-      <FeatureAProvider>
-        <FeatureAComponents />
-      </FeatureAProvider>
+      {/* First counter instance */}
+      <CounterQueryProvider atoms={{ counter: { value: 0, name: "First Counter" } }}>
+        <CounterSection title="First Section" />
+      </CounterQueryProvider>
 
-      <FeatureBProvider>
-        <FeatureBComponents />
-      </FeatureBProvider>
+      {/* Second counter instance (completely independent) */}
+      <CounterQueryProvider atoms={{ counter: { value: 10, name: "Second Counter" } }}>
+        <CounterSection title="Second Section" />
+      </CounterQueryProvider>
+    </div>
+  );
+}
+
+function CounterSection({ title }) {
+  const [counter, setCounter] = useCounterAtom("counter");
+  
+  return (
+    <div>
+      <h2>{title}</h2>
+      <p>{counter.name}: {counter.value}</p>
+      <button onClick={() => setCounter(prev => ({ ...prev, value: prev.value + 1 }))}>
+        Increment
+      </button>
     </div>
   );
 }
 ```
+
+Each provider maintains its own state, so changing one counter won't affect the other.
 
 ## Project Structure
 

@@ -64,263 +64,264 @@ pnpm add @context-query/react
 ### 1. Context Query Provider 생성
 
 ```tsx
-// UserContextQueryProvider.tsx
+// CounterContextQueryProvider.tsx
 import { createContextQuery } from "@context-query/react";
 
-interface UserData {
-  name: string;
-  email: string;
-  preferences: {
-    theme: "light" | "dark";
-    notifications: boolean;
+type CounterAtoms = {
+  primaryCounter: {
+    name: string;
+    value: number;
+    description: string;
   };
-}
+  secondaryCounter: {
+    name: string;
+    value: number;
+    description: string;
+  };
+};
 
 export const {
-  ContextQueryProvider: UserQueryProvider,
-  useContextQuery: useUserQuery,
-  useContextSetter: useUserSetter,
-} = createContextQuery<UserData>();
+  ContextQueryProvider: CounterQueryProvider,
+  useContextAtom: useCounterAtom,
+  useContextAtomValue: useCounterAtomValue,
+  useContextSetAtom: useCounterSetAtom,
+} = createContextQuery<CounterAtoms>();
 ```
 
-### 2. Provider로 컴포넌트 트리 감싸기 및 상태 초기화
+### 2. Provider로 컴포넌트 트리 감싸기 및 Atom 초기화
 
 ```tsx
-// UserProfilePage.tsx
-import { useEffect } from "react";
-import { UserQueryProvider, useUserSetter } from "./UserContextQueryProvider";
+// CounterApp.tsx
+import { CounterQueryProvider } from "./CounterContextQueryProvider";
 
-async function fetchUserData(userId: string) {
-  const response = await fetch(`/api/users/${userId}`);
-  return response.json();
-}
-
-function UserProfilePage({ userId }: { userId: string }) {
-  const initialState = {
-    name: "",
-    email: "",
-    preferences: {
-      theme: "light" as const,
-      notifications: true,
-    },
-  };
-
+function CounterApp() {
   return (
-    <UserQueryProvider initialState={initialState}>
-      <UserProfileContent userId={userId} />
-    </UserQueryProvider>
+    <CounterQueryProvider
+      atoms={{
+        primaryCounter: {
+          name: "메인 카운터",
+          value: 0,
+          description: "다른 카운터들을 제어하는 메인 카운터",
+        },
+        secondaryCounter: {
+          name: "보조 카운터",
+          value: 0,
+          description: "메인 카운터와 연동되는 보조 카운터",
+        },
+      }}
+    >
+      <CounterContent />
+    </CounterQueryProvider>
   );
 }
 
-function UserProfileContent({ userId }: { userId: string }) {
-  const setUserState = useUserSetter();
-
-  useEffect(() => {
-    // 외부 데이터로 상태 초기화
-    const loadUserData = async () => {
-      const userData = await fetchUserData(userId);
-      setUserState(userData); // 가져온 데이터로 전체 상태 업데이트
-    };
-    loadUserData();
-  }, [userId, setUserState]);
-
+function CounterContent() {
   return (
-    <div className="user-profile">
-      <UserInfoForm />
-      <UserPreferencesForm />
-      <SaveButton />
+    <div className="counter-app">
+      <PrimaryCounterComponent />
+      <SecondaryCounterComponent />
     </div>
   );
 }
 ```
 
-### 3. 컴포넌트에서 상태 사용하기
+### 3. 컴포넌트에서 Atom 사용하기
 
 ```tsx
-// UserInfoForm.tsx
-import { useUserQuery } from "./UserContextQueryProvider";
+// PrimaryCounterComponent.tsx
+import { useCounterAtom, useCounterSetAtom } from "./CounterContextQueryProvider";
 
-function UserInfoForm() {
-  // 사용자 정보 필드만 구독
-  const [state, setState] = useUserQuery(["name", "email"]);
+function PrimaryCounterComponent() {
+  // primary counter atom만 구독
+  const [primaryCounter, setPrimaryCounter] = useCounterAtom("primaryCounter");
+  const setSecondaryCounter = useCounterSetAtom("secondaryCounter");
+
+  const increment = () => {
+    setPrimaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
+    // 보조 카운터도 함께 업데이트
+    setSecondaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
+  };
+
+  const decrement = () => {
+    setPrimaryCounter((prev) => ({ ...prev, value: prev.value - 1 }));
+  };
+
+  const reset = () => {
+    setPrimaryCounter((prev) => ({ ...prev, value: 0 }));
+  };
 
   return (
-    <div className="user-info">
-      <h3>기본 정보</h3>
-      <div>
-        <label>이름:</label>
-        <input
-          value={state.name}
-          onChange={(e) =>
-            setState((prev) => ({ ...prev, name: e.target.value }))
-          }
-        />
-      </div>
-      <div>
-        <label>이메일:</label>
-        <input
-          value={state.email}
-          onChange={(e) =>
-            setState((prev) => ({ ...prev, email: e.target.value }))
-          }
-        />
+    <div className="counter">
+      <h2>{primaryCounter.name}</h2>
+      <p>{primaryCounter.description}</p>
+      <div className="counter-controls">
+        <span>{primaryCounter.value}</span>
+        <button onClick={decrement}>-</button>
+        <button onClick={increment}>+</button>
+        <button onClick={reset}>초기화</button>
       </div>
     </div>
   );
 }
 
-// UserPreferencesForm.tsx
-import { useUserQuery } from "./UserContextQueryProvider";
+// SecondaryCounterComponent.tsx
+import { useCounterAtomValue } from "./CounterContextQueryProvider";
 
-function UserPreferencesForm() {
-  // preferences만 구독
-  const [state, setState] = useUserQuery(["preferences"]);
-
-  const toggleTheme = () => {
-    setState((prev) => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        theme: prev.preferences.theme === "light" ? "dark" : "light",
-      },
-    }));
-  };
-
-  const toggleNotifications = () => {
-    setState((prev) => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        notifications: !prev.preferences.notifications,
-      },
-    }));
-  };
+function SecondaryCounterComponent() {
+  // secondary counter atom에 대한 읽기 전용 액세스
+  const secondaryCounter = useCounterAtomValue("secondaryCounter");
 
   return (
-    <div className="user-preferences">
-      <h3>사용자 설정</h3>
-      <div>
-        <label>테마: {state.preferences.theme}</label>
-        <button onClick={toggleTheme}>테마 변경</button>
-      </div>
-      <div>
-        <label>
-          <input
-            type="checkbox"
-            checked={state.preferences.notifications}
-            onChange={toggleNotifications}
-          />
-          알림 활성화
-        </label>
+    <div className="counter secondary">
+      <h3>{secondaryCounter.name}</h3>
+      <p>{secondaryCounter.description}</p>
+      <div className="counter-display">
+        <span>{secondaryCounter.value}</span>
       </div>
     </div>
   );
 }
 
-// SaveButton.tsx
-import { useUserQuery, useUserSetter } from "./UserContextQueryProvider";
+// BatchUpdateComponent.tsx
+import { useCounterSetAtom } from "./CounterContextQueryProvider";
 
-function SaveButton() {
-  // 저장을 위해 모든 사용자 데이터 가져오기
-  const [userData] = useUserQuery(["name", "email", "preferences"]);
-  const setUserState = useUserSetter();
+function BatchUpdateComponent() {
+  const setPrimaryCounter = useCounterSetAtom("primaryCounter");
+  const setSecondaryCounter = useCounterSetAtom("secondaryCounter");
 
-  const handleSave = async () => {
-    try {
-      const response = await fetch("/api/users/update", {
-        method: "POST",
-        body: JSON.stringify(userData),
-      });
-      const updatedUser = await response.json();
-
-      // 서버 응답으로 전체 상태 업데이트
-      setUserState(updatedUser);
-    } catch (error) {
-      console.error("사용자 데이터 저장 실패:", error);
-    }
+  const resetAll = () => {
+    setPrimaryCounter((prev) => ({ ...prev, value: 0 }));
+    setSecondaryCounter((prev) => ({ ...prev, value: 0 }));
   };
 
-  return <button onClick={handleSave}>변경사항 저장</button>;
+  const incrementAll = () => {
+    setPrimaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
+    setSecondaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
+  };
+
+  return (
+    <div className="batch-controls">
+      <button onClick={resetAll}>모든 카운터 초기화</button>
+      <button onClick={incrementAll}>모든 카운터 증가</button>
+    </div>
+  );
 }
 ```
 
 이 예시는 다음을 보여줍니다:
 
-1. 사용자 정보와 환경설정을 별도의 컴포넌트로 분리하여 관심사를 분리
-2. 각 컴포넌트는 필요한 상태만 구독하여 리렌더링을 최적화
-3. 컴포넌트들이 독립적으로 자신의 관련 상태를 업데이트
+1. **Atom 기반 아키텍처**: 각 상태 조각이 별도의 atom으로 관리됨
+2. **세밀한 구독**: 컴포넌트는 필요한 atom만 구독하여 리렌더링을 최적화
+3. **읽기-쓰기 분리**: 읽기-쓰기 액세스는 `useContextAtom`, 읽기 전용은 `useContextAtomValue`, 쓰기 전용은 `useContextSetAtom` 사용
+4. **Atom 간 업데이트**: 컴포넌트는 여러 atom을 독립적으로 업데이트 가능
 
 ## 고급 사용법
 
-### 함수형 업데이트
+### 사용 가능한 훅들
 
-React의 `useState`와 유사하게, 상태 설정자에 함수를 전달할 수 있습니다:
+`createContextQuery` 함수는 서로 다른 사용 사례를 위한 세 가지 훅을 반환합니다:
 
 ```tsx
-const [{ count1 }, setState] = useCounterQuery(["count1"]);
-
-// 이전 상태를 기반으로 업데이트
-const increment = () => {
-  setState((prev) => ({ ...prev, count1: prev.count1 + 1 }));
-};
+const {
+  ContextQueryProvider,
+  useContextAtom,        // atom에 대한 읽기-쓰기 액세스
+  useContextAtomValue,   // atom에 대한 읽기 전용 액세스
+  useContextSetAtom,     // atom에 대한 쓰기 전용 액세스
+} = createContextQuery<YourAtomTypes>();
 ```
 
-### 다중 상태 업데이트
+### 훅 사용 패턴
 
-`useContextSetter` 훅을 사용하여 여러 상태를 한 번에 업데이트할 수 있습니다:
-
+#### `useContextAtom` - 읽기 & 쓰기
 ```tsx
-import { useCounterSetter } from "./CounterContextQueryProvider";
-
-function BatchUpdateComponent() {
-  const setState = useCounterSetter();
-
-  // 여러 상태를 한 번에 업데이트
-  const resetCounters = () => {
-    setState({
-      count1: 0,
-      count2: 0,
-      count3: 0,
-    });
+function CounterComponent() {
+  const [counter, setCounter] = useContextAtom("counter");
+  
+  const increment = () => {
+    setCounter((prev) => ({ ...prev, value: prev.value + 1 }));
   };
-
-  // 이전 상태를 기반으로 업데이트하는 함수 사용
-  const incrementAll = () => {
-    setState((prev) => ({
-      count1: prev.count1 + 1,
-      count2: prev.count2 + 1,
-      count3: prev.count3 + 1,
-    }));
-  };
-
+  
   return (
     <div>
-      <button onClick={resetCounters}>모두 초기화</button>
-      <button onClick={incrementAll}>모두 증가</button>
+      <span>{counter.value}</span>
+      <button onClick={increment}>+</button>
     </div>
   );
 }
 ```
 
+#### `useContextAtomValue` - 읽기 전용
+```tsx
+function DisplayComponent() {
+  const counter = useContextAtomValue("counter");
+  
+  return <div>현재 값: {counter.value}</div>;
+}
+```
+
+#### `useContextSetAtom` - 쓰기 전용
+```tsx
+function ControlComponent() {
+  const setCounter = useContextSetAtom("counter");
+  
+  const reset = () => {
+    setCounter((prev) => ({ ...prev, value: 0 }));
+  };
+  
+  return <button onClick={reset}>초기화</button>;
+}
+```
+
+### 함수형 업데이트
+
+React의 `useState`와 유사하게, atom 설정자에 함수를 전달할 수 있습니다:
+
+```tsx
+const [counter, setCounter] = useContextAtom("counter");
+
+// 이전 상태를 기반으로 업데이트
+const increment = () => {
+  setCounter((prev) => ({ ...prev, value: prev.value + 1 }));
+};
+```
+
 ### 다중 프로바이더
 
-서로 다른 컴포넌트 트리에 대해 여러 프로바이더를 사용할 수 있습니다:
+동일한 프로바이더를 여러 번 사용하면 각각 독립적인 상태를 가집니다:
 
 ```tsx
 function App() {
   return (
     <div>
-      <FeatureAProvider>
-        <FeatureAComponents />
-      </FeatureAProvider>
+      {/* 첫 번째 카운터 인스턴스 */}
+      <CounterQueryProvider atoms={{ counter: { value: 0, name: "첫 번째 카운터" } }}>
+        <CounterSection title="첫 번째 구역" />
+      </CounterQueryProvider>
 
-      <FeatureBProvider>
-        <FeatureBComponents />
-      </FeatureBProvider>
+      {/* 두 번째 카운터 인스턴스 (완전히 독립적) */}
+      <CounterQueryProvider atoms={{ counter: { value: 10, name: "두 번째 카운터" } }}>
+        <CounterSection title="두 번째 구역" />
+      </CounterQueryProvider>
+    </div>
+  );
+}
+
+function CounterSection({ title }) {
+  const [counter, setCounter] = useCounterAtom("counter");
+  
+  return (
+    <div>
+      <h2>{title}</h2>
+      <p>{counter.name}: {counter.value}</p>
+      <button onClick={() => setCounter(prev => ({ ...prev, value: prev.value + 1 }))}>
+        증가
+      </button>
     </div>
   );
 }
 ```
+
+각 프로바이더는 자체 상태를 가지므로 한 쪽의 카운터를 변경해도 다른 쪽에 영향을 주지 않습니다.
 
 ## 프로젝트 구조
 
