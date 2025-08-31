@@ -3,5 +3,7 @@ export type Subscription = {
 };
 
 export type Listener<T> = (value: T) => void;
-export type Updater<TState> = (state: TState) => Partial<TState>;
+export type AtomListener<T> = (value: T) => void;
+export type Updater<TAtoms> = (atoms: TAtoms) => Partial<TAtoms>;
 export type TStateImpl = Record<string, any>;
+export type TAtoms = Record<string, any>;

@@ -1,81 +1,68 @@
-import { Listener, Subscription, TStateImpl } from "./types";
+import { AtomStore } from "./atom-store";
+import { Subscription } from "./types";
 
-export class ContextQueryStore<TState extends TStateImpl> {
-  private state: TState;
-  private listeners: Map<keyof TState, Set<Listener<any>>>;
+export class ContextQueryStore<TAtoms extends Record<string, any>> {
+  private atoms: Map<keyof TAtoms, AtomStore<any>>;
 
-  constructor(initialState: TState) {
-    this.state = initialState;
-    this.listeners = new Map();
-  }
+  constructor(initialValues: TAtoms) {
+    this.atoms = new Map();
 
-  public getState(): TState {
-    return this.state;
-  }
-
-  public getStateByKey<TKey extends keyof TState>(key: TKey): TState[TKey] {
-    return this.state[key];
-  }
-
-  public updateState<TKey extends keyof TState>(state: TState): void {
-    const prevState = { ...this.state };
-    this.state = { ...state };
-    const keys = Object.keys(state) as TKey[];
-
-    keys.forEach((key: TKey) => {
-      if (!Object.is(prevState[key], this.state[key])) {
-        this.notifyListeners(key);
-      }
+    Object.entries(initialValues).forEach(([key, value]) => {
+      this.atoms.set(key as keyof TAtoms, new AtomStore(value));
     });
   }
 
-  public setState<TKey extends keyof TState>(
+  public getAtomValue<TKey extends keyof TAtoms>(key: TKey): TAtoms[TKey] {
+    const atomStore = this.atoms.get(key);
+    if (!atomStore) {
+      throw new Error(`Atom with key "${String(key)}" not found`);
+    }
+    return atomStore.getValue();
+  }
+
+  public setAtomValue<TKey extends keyof TAtoms>(
     key: TKey,
-    value: TState[TKey]
+    value: TAtoms[TKey]
   ): void {
-    if (Object.is(this.state[key], value)) {
-      return;
+    const atomStore = this.atoms.get(key);
+    if (!atomStore) {
+      throw new Error(`Atom with key "${String(key)}" not found`);
     }
-
-    this.state = { ...this.state, [key]: value };
-
-    this.notifyListeners(key);
+    atomStore.setValue(value);
   }
 
-  private notifyListeners<TKey extends keyof TState>(key: TKey) {
-    const listeners = this.listeners.get(key);
-    if (listeners) {
-      const value = this.state[key];
-      listeners.forEach((listener) => listener(value));
-    }
-  }
-
-  public subscribe<TKey extends keyof TState>(
+  public subscribeToAtom<TKey extends keyof TAtoms>(
     key: TKey,
-    listener: (key: TKey, value: TState[TKey]) => void
+    listener: (key: TKey, value: TAtoms[TKey]) => void
   ): Subscription {
-    const keyListener = (value: TState[TKey]) => {
+    const atomStore = this.atoms.get(key);
+    if (!atomStore) {
+      throw new Error(`Atom with key "${String(key)}" not found`);
+    }
+
+    const atomListener = (value: TAtoms[TKey]) => {
       listener(key, value);
     };
 
-    if (!this.listeners.has(key)) {
-      this.listeners.set(key, new Set());
-    }
+    return atomStore.subscribe(atomListener);
+  }
 
-    this.listeners.get(key)!.add(keyListener);
+  public getAllAtomValues(): TAtoms {
+    const result = {} as TAtoms;
 
-    const unsubscribe = () => {
-      const keyListeners = this.listeners.get(key);
-      if (keyListeners) {
-        keyListeners.delete(keyListener);
-        if (keyListeners.size === 0) {
-          this.listeners.delete(key);
-        }
+    this.atoms.forEach((atomStore, key) => {
+      result[key] = atomStore.getValue();
+    });
+
+    return result;
+  }
+
+  public updateAllAtoms(newAtoms: Partial<TAtoms>): void {
+    Object.entries(newAtoms).forEach(([key, value]) => {
+      const atomStore = this.atoms.get(key as keyof TAtoms);
+      if (atomStore) {
+        atomStore.setValue(value);
       }
-    };
-
-    return {
-      unsubscribe,
-    };
+    });
   }
 }
