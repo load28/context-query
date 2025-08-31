@@ -1,6 +1,6 @@
+import type { ContextQueryStore } from "@context-query/core";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { createStoreContext } from "./context";
-import type { ContextQueryStore } from "@context-query/core";
 
 export function createUseStore<TAtoms extends Record<string, any>>(
   StoreContext: ReturnType<typeof createStoreContext<TAtoms>>
@@ -9,9 +9,7 @@ export function createUseStore<TAtoms extends Record<string, any>>(
     const store = useContext(StoreContext);
 
     if (!store) {
-      throw new Error(
-        "useStore must be used within a ContextQueryProvider"
-      );
+      throw new Error("useStore must be used within a ContextQueryProvider");
     }
 
     return store;
@@ -38,6 +36,10 @@ export function createUseContextAtom<TAtoms extends Record<string, any>>(
     const [value, setValue] = useState<TAtoms[TKey]>(() =>
       store.getAtomValue(key)
     );
+
+    useEffect(() => {
+      setValue(store.getAtomValue(key));
+    }, [store, key]);
 
     useEffect(() => {
       const handleChange = (_: TKey, newValue: TAtoms[TKey]) => {
@@ -88,6 +90,10 @@ export function createUseContextAtomValue<TAtoms extends Record<string, any>>(
     const [value, setValue] = useState<TAtoms[TKey]>(() =>
       store.getAtomValue(key)
     );
+
+    useEffect(() => {
+      setValue(store.getAtomValue(key));
+    }, [store, key]);
 
     useEffect(() => {
       const handleChange = (_: TKey, newValue: TAtoms[TKey]) => {
@@ -149,9 +155,7 @@ export function createUseAllAtoms<TAtoms extends Record<string, any>>(
     const store = useContext(StoreContext);
 
     if (!store) {
-      throw new Error(
-        "useAllAtoms must be used within a ContextQueryProvider"
-      );
+      throw new Error("useAllAtoms must be used within a ContextQueryProvider");
     }
 
     return store;
@@ -164,10 +168,13 @@ export function createUseAllAtoms<TAtoms extends Record<string, any>>(
     );
 
     useEffect(() => {
-      // Subscribe to all atoms by getting all keys and subscribing to each
+      setAllValues(store.getAllAtomValues());
+    }, [store]);
+
+    useEffect(() => {
       const subscriptions: Array<{ unsubscribe: () => void }> = [];
       const currentAtoms = store.getAllAtomValues();
-      
+
       Object.keys(currentAtoms).forEach((key) => {
         const subscription = store.subscribeToAtom(key as keyof TAtoms, () => {
           setAllValues(store.getAllAtomValues());
@@ -176,7 +183,7 @@ export function createUseAllAtoms<TAtoms extends Record<string, any>>(
       });
 
       return () => {
-        subscriptions.forEach(sub => sub.unsubscribe());
+        subscriptions.forEach((sub) => sub.unsubscribe());
       };
     }, [store]);
 
@@ -213,10 +220,13 @@ export function createUseAllAtomsValue<TAtoms extends Record<string, any>>(
     );
 
     useEffect(() => {
-      // Subscribe to all atoms by getting all keys and subscribing to each
+      setAllValues(store.getAllAtomValues());
+    }, [store]);
+
+    useEffect(() => {
       const subscriptions: Array<{ unsubscribe: () => void }> = [];
       const currentAtoms = store.getAllAtomValues();
-      
+
       Object.keys(currentAtoms).forEach((key) => {
         const subscription = store.subscribeToAtom(key as keyof TAtoms, () => {
           setAllValues(store.getAllAtomValues());
@@ -225,7 +235,7 @@ export function createUseAllAtomsValue<TAtoms extends Record<string, any>>(
       });
 
       return () => {
-        subscriptions.forEach(sub => sub.unsubscribe());
+        subscriptions.forEach((sub) => sub.unsubscribe());
       };
     }, [store]);
 
