@@ -1,6 +1,5 @@
 import type { MetaFunction } from "@remix-run/node";
 import { createContextQuery } from "@context-query/react";
-import { atom } from "@context-query/core";
 import { useState } from "react";
 
 export const meta: MetaFunction = () => {
@@ -10,15 +9,11 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-// Define atoms
-const countAtom = atom(0);
-const userAtom = atom({ name: "Guest", email: "" });
-const todoListAtom = atom<string[]>([]);
-
+// Define atom types
 type AppAtoms = {
-  count: typeof countAtom;
-  user: typeof userAtom;
-  todoList: typeof todoListAtom;
+  count: number;
+  user: { name: string; email: string };
+  todoList: string[];
 };
 
 // Create context query instance
@@ -191,9 +186,9 @@ export default function Index() {
   return (
     <ContextQueryProvider
       atoms={{
-        count: countAtom,
-        user: userAtom,
-        todoList: todoListAtom,
+        count: 0,
+        user: { name: "Guest", email: "" },
+        todoList: [],
       }}
     >
       <div style={styles.container}>
