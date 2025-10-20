@@ -323,6 +323,205 @@ function CounterSection({ title }) {
 
 Each provider maintains its own state, so changing one counter won't affect the other.
 
+## SSR Support
+
+Context Query provides full support for Server-Side Rendering (SSR) environments, including Next.js and Remix. The library is designed to work seamlessly in both client and server contexts.
+
+### Framework Examples
+
+- **[Next.js Example](./examples/nextjs)**: Demonstrates usage with Next.js App Router
+- **[Remix Example](./examples/remix)**: Shows integration with Remix applications
+
+### Usage in SSR Environments
+
+#### Next.js (App Router)
+
+For Next.js applications using the App Router, you need to mark components using Context Query hooks as client components:
+
+```tsx
+"use client";
+
+import { createContextQuery } from "@context-query/react";
+
+type MyAtoms = {
+  counter: { value: number };
+};
+
+const {
+  ContextQueryProvider,
+  useContextAtom,
+} = createContextQuery<MyAtoms>();
+
+export default function MyApp() {
+  return (
+    <ContextQueryProvider
+      atoms={{
+        counter: { value: 0 },
+      }}
+    >
+      <CounterComponent />
+    </ContextQueryProvider>
+  );
+}
+
+function CounterComponent() {
+  const [counter, setCounter] = useContextAtom("counter");
+
+  return (
+    <div>
+      <p>Count: {counter.value}</p>
+      <button onClick={() => setCounter({ value: counter.value + 1 })}>
+        Increment
+      </button>
+    </div>
+  );
+}
+```
+
+#### Remix
+
+Remix applications work similarly, with hooks automatically running on the client side:
+
+```tsx
+import { createContextQuery } from "@context-query/react";
+
+type MyAtoms = {
+  counter: number;
+};
+
+const {
+  ContextQueryProvider,
+  useContextAtom,
+} = createContextQuery<MyAtoms>();
+
+export default function Index() {
+  return (
+    <ContextQueryProvider atoms={{ counter: 0 }}>
+      <CounterComponent />
+    </ContextQueryProvider>
+  );
+}
+
+function CounterComponent() {
+  const [counter, setCounter] = useContextAtom("counter");
+
+  return (
+    <div>
+      <p>Count: {counter}</p>
+      <button onClick={() => setCounter(counter + 1)}>Increment</button>
+    </div>
+  );
+}
+```
+
+### Important Notes
+
+1. **Client-Side Only**: Context Query hooks (`useContextAtom`, `useContextAtomValue`, `useContextSetAtom`) work only on the client side. Components using these hooks must be client components in Next.js (marked with `"use client"`).
+
+2. **Provider Placement**: Place the `ContextQueryProvider` at the appropriate level in your component tree:
+   - For global state: Wrap your entire app in `layout.tsx` (Next.js) or `root.tsx` (Remix)
+   - For route-specific state: Wrap individual pages or route components
+
+3. **Initial State**: Define initial atom values in the `atoms` prop of `ContextQueryProvider`. This ensures consistent state initialization across server and client renders.
+
+4. **Hydration**: The library handles React hydration automatically. Ensure your initial state is consistent between server and client to avoid hydration mismatches.
+
+### Troubleshooting
+
+#### "Cannot use hooks on the server" Error
+
+**Problem**: You're trying to use Context Query hooks in a server component.
+
+**Solution**:
+- In Next.js: Add `"use client"` directive at the top of your component file
+- In Remix: Ensure hooks are only called in client-side rendered components
+
+```tsx
+"use client"; // Add this for Next.js
+
+import { useContextAtom } from "./MyContextQueryProvider";
+
+function MyComponent() {
+  const [value, setValue] = useContextAtom("myAtom");
+  // ...
+}
+```
+
+#### Hydration Mismatch Warnings
+
+**Problem**: React warns about content mismatch between server and client.
+
+**Solution**: Ensure your initial atom values are deterministic and don't depend on client-only APIs:
+
+```tsx
+// Bad: Uses client-only API
+<ContextQueryProvider
+  atoms={{
+    theme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+  }}
+>
+
+// Good: Use consistent initial value, update on client mount
+<ContextQueryProvider
+  atoms={{
+    theme: "light" // Consistent default
+  }}
+>
+```
+
+Then update the value after mounting:
+
+```tsx
+function ThemeInitializer() {
+  const setTheme = useContextSetAtom("theme");
+
+  useEffect(() => {
+    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setTheme(isDark ? "dark" : "light");
+  }, [setTheme]);
+
+  return null;
+}
+```
+
+#### Provider Not Found Error
+
+**Problem**: `Error: ContextQueryProvider not found in component tree`
+
+**Solution**: Ensure your `ContextQueryProvider` wraps all components that use Context Query hooks:
+
+```tsx
+// Incorrect: Provider missing
+export default function Page() {
+  return <ComponentUsingHooks />;
+}
+
+// Correct: Provider wraps components
+export default function Page() {
+  return (
+    <ContextQueryProvider atoms={{ myAtom: initialValue }}>
+      <ComponentUsingHooks />
+    </ContextQueryProvider>
+  );
+}
+```
+
+#### State Not Persisting Across Navigation
+
+**Problem**: State resets when navigating between pages.
+
+**Solution**:
+- Move the provider higher in the component tree (e.g., `layout.tsx` in Next.js or `root.tsx` in Remix)
+- For route-specific state, this behavior is expected and by design
+
+### Best Practices for SSR
+
+1. **Keep Initial State Simple**: Use plain objects and primitive values for initial state
+2. **Avoid Client-Only APIs**: Don't access `window`, `localStorage`, or other browser APIs during initial render
+3. **Use Effect Hooks for Client Updates**: Update state based on client-only data in `useEffect`
+4. **Type Safety**: Leverage TypeScript for type-safe atom definitions
+5. **Provider Scope**: Use multiple providers for different scopes rather than one global provider
+
 ## Project Structure
 
 The project consists of multiple packages:
