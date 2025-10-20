@@ -1,0 +1,33 @@
+{
+  "name": "@context-query/remix-example",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Remix example using @context-query/react",
+  "type": "module",
+  "scripts": {
+    "dev": "remix vite:dev",
+    "build": "remix vite:build",
+    "start": "remix-serve ./build/server/index.js",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@context-query/core": "workspace:*",
+    "@context-query/react": "workspace:*",
+    "@remix-run/node": "^2.15.2",
+    "@remix-run/react": "^2.15.2",
+    "@remix-run/serve": "^2.15.2",
+    "isbot": "^4.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "^2.15.2",
+    "@types/react": "^18.2.20",
+    "@types/react-dom": "^18.2.7",
+    "typescript": "^5.8.2",
+    "vite": "^6.0.7"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
