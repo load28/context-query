@@ -1,6 +1,10 @@
 import { AtomStore } from "./atom-store";
-import { Subscription } from "./types";
+import { AtomListener, Subscription } from "./types";
 
+/**
+ * 여러 AtomStore를 관리하는 통합 스토어
+ * useSyncExternalStore와 호환되도록 설계됨
+ */
 export class ContextQueryStore<TAtoms extends Record<string, any>> {
   private atoms: Map<keyof TAtoms, AtomStore<any>>;
 
@@ -31,20 +35,22 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
     atomStore.setValue(value);
   }
 
+  /**
+   * useSyncExternalStore 호환 구독 메서드
+   * @param key 구독할 atom의 키
+   * @param listener 상태 변경 시 호출될 콜백 (인자 없음)
+   * @returns 구독 해제 함수를 포함한 객체
+   */
   public subscribeToAtom<TKey extends keyof TAtoms>(
     key: TKey,
-    listener: (key: TKey, value: TAtoms[TKey]) => void
+    listener: AtomListener
   ): Subscription {
     const atomStore = this.atoms.get(key);
     if (!atomStore) {
       throw new Error(`Atom with key "${String(key)}" not found`);
     }
 
-    const atomListener = (value: TAtoms[TKey]) => {
-      listener(key, value);
-    };
-
-    return atomStore.subscribe(atomListener);
+    return atomStore.subscribe(listener);
   }
 
   public getAllAtomValues(): TAtoms {
