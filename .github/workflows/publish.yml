@@ -10,15 +10,20 @@ on:
         options:
           - core
           - react
-      version:
-        description: 'Version to publish (e.g., 1.0.0 for release, 1.0.0-beta.1 for prerelease)'
+      release_type:
+        description: 'Release type'
         required: true
-        type: string
-      prerelease:
-        description: 'Is this a prerelease?'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - prerelease
+      prerelease_id:
+        description: 'Prerelease identifier (beta, alpha, rc) - only for prerelease type'
         required: false
-        type: boolean
-        default: false
+        type: string
+        default: 'beta'
 
 jobs:
   publish:
@@ -45,32 +50,30 @@ jobs:
       
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
-      
-      - name: Validate version format
-        run: |
-          VERSION="${{ github.event.inputs.version }}"
-          IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
-          
-          # Check if version matches prerelease setting
-          if [[ "$IS_PRERELEASE" == "true" ]]; then
-            if ! [[ "$VERSION" =~ -([a-zA-Z]+)\.?[0-9]* ]]; then
-              echo "Error: Prerelease version must include a prerelease identifier (e.g., 1.0.0-beta.1, 1.0.0-alpha.1, 1.0.0-rc.1)"
-              exit 1
-            fi
-            echo "Valid prerelease version: $VERSION"
-          else
-            if [[ "$VERSION" =~ - ]]; then
-              echo "Error: Release version should not contain prerelease identifiers. Use format like 1.0.0"
-              exit 1
-            fi
-            echo "Valid release version: $VERSION"
-          fi
-      
-      - name: Update package version
+
+      - name: Calculate and update version
+        id: version
         run: |
           cd packages/${{ github.event.inputs.package }}
-          npm version ${{ github.event.inputs.version }} --no-git-tag-version
-          echo "Updated version to ${{ github.event.inputs.version }}"
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+          PREID="${{ github.event.inputs.prerelease_id }}"
+
+          echo "Current version: $CURRENT_VERSION"
+          echo "Release type: $RELEASE_TYPE"
+
+          if [[ "$RELEASE_TYPE" == "prerelease" ]]; then
+            NEW_VERSION=$(npm version prerelease --preid=$PREID --no-git-tag-version | tr -d 'v')
+            IS_PRERELEASE="true"
+          else
+            NEW_VERSION=$(npm version $RELEASE_TYPE --no-git-tag-version | tr -d 'v')
+            IS_PRERELEASE="false"
+          fi
+
+          echo "New version: $NEW_VERSION"
+          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "new=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
       
       - name: Build package
         run: pnpm build --filter=@context-query/${{ github.event.inputs.package }}
@@ -78,49 +81,49 @@ jobs:
       - name: Publish to npm Registry
         run: |
           cd packages/${{ github.event.inputs.package }}
-          if [[ "${{ github.event.inputs.prerelease }}" == "true" ]]; then
+          if [[ "${{ steps.version.outputs.is_prerelease }}" == "true" ]]; then
             npm publish --tag prerelease --registry=https://registry.npmjs.org --//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
-            echo "Published as prerelease with tag 'prerelease'"
+            echo "Published ${{ steps.version.outputs.new }} as prerelease"
           else
             npm publish --registry=https://registry.npmjs.org --//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
-            echo "Published as latest"
+            echo "Published ${{ steps.version.outputs.new }} as latest"
           fi
       
       - name: Commit version change
-        if: github.event.inputs.prerelease == 'false'
+        if: steps.version.outputs.is_prerelease == 'false'
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           git add packages/${{ github.event.inputs.package }}/package.json
-          git commit -m "chore: bump @context-query/${{ github.event.inputs.package }} to v${{ github.event.inputs.version }}"
+          git commit -m "chore: bump @context-query/${{ github.event.inputs.package }} to v${{ steps.version.outputs.new }}"
           git push
-      
+
       - name: Create Git tag
-        if: github.event.inputs.prerelease == 'false'
+        if: steps.version.outputs.is_prerelease == 'false'
         run: |
-          TAG_NAME="${{ github.event.inputs.package }}-v${{ github.event.inputs.version }}"
+          TAG_NAME="${{ github.event.inputs.package }}-v${{ steps.version.outputs.new }}"
           git tag $TAG_NAME
           git push origin $TAG_NAME
           echo "Created tag: $TAG_NAME"
-      
+
       - name: Create GitHub Release
-        if: github.event.inputs.prerelease == 'false'
+        if: steps.version.outputs.is_prerelease == 'false'
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.PACKAGE_KEY }}
         with:
-          tag_name: ${{ github.event.inputs.package }}-v${{ github.event.inputs.version }}
-          release_name: "@context-query/${{ github.event.inputs.package }} v${{ github.event.inputs.version }}"
+          tag_name: ${{ github.event.inputs.package }}-v${{ steps.version.outputs.new }}
+          release_name: "@context-query/${{ github.event.inputs.package }} v${{ steps.version.outputs.new }}"
           body: |
-            ## @context-query/${{ github.event.inputs.package }} v${{ github.event.inputs.version }}
-            
+            ## @context-query/${{ github.event.inputs.package }} v${{ steps.version.outputs.new }}
+
             Published to npm registry.
-            
+
             ### Installation
             ```bash
             # Install specific version
-            npm install @context-query/${{ github.event.inputs.package }}@${{ github.event.inputs.version }}
-            
+            npm install @context-query/${{ github.event.inputs.package }}@${{ steps.version.outputs.new }}
+
             # Install latest stable version
             npm install @context-query/${{ github.event.inputs.package }}@latest
             ```
