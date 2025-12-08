@@ -219,7 +219,7 @@ function BatchUpdateComponent() {
 
 ### 사용 가능한 훅들
 
-`createContextQuery` 함수는 서로 다른 사용 사례를 위한 세 가지 훅을 반환합니다:
+`createContextQuery` 함수는 Provider와 7개의 훅을 반환합니다:
 
 ```tsx
 const {
@@ -227,6 +227,10 @@ const {
   useContextAtom,        // atom에 대한 읽기-쓰기 액세스
   useContextAtomValue,   // atom에 대한 읽기 전용 액세스
   useContextSetAtom,     // atom에 대한 쓰기 전용 액세스
+  useStore,              // 스토어 직접 액세스
+  useAllAtoms,           // 모든 atom에 대한 읽기-쓰기 액세스
+  useAllAtomsValue,      // 모든 atom에 대한 읽기 전용 액세스
+  useUpdateAllAtoms,     // 모든 atom에 대한 쓰기 전용 액세스
 } = createContextQuery<YourAtomTypes>();
 ```
 
@@ -263,12 +267,65 @@ function DisplayComponent() {
 ```tsx
 function ControlComponent() {
   const setCounter = useContextSetAtom("counter");
-  
+
   const reset = () => {
     setCounter((prev) => ({ ...prev, value: 0 }));
   };
-  
+
   return <button onClick={reset}>초기화</button>;
+}
+```
+
+#### `useStore` - 스토어 직접 액세스
+```tsx
+function AdvancedComponent() {
+  const store = useStore();
+
+  // 고급 사용 사례를 위한 스토어 API 직접 액세스
+  const value = store.getAtomValue("counter");
+  store.setAtomValue("counter", newValue);
+}
+```
+
+#### `useAllAtoms` - 모든 Atom 읽기 & 쓰기
+```tsx
+function BatchComponent() {
+  const [allAtoms, updateAllAtoms] = useAllAtoms();
+
+  const resetAll = () => {
+    updateAllAtoms({
+      primaryCounter: { ...allAtoms.primaryCounter, value: 0 },
+      secondaryCounter: { ...allAtoms.secondaryCounter, value: 0 },
+    });
+  };
+
+  return <button onClick={resetAll}>모두 초기화</button>;
+}
+```
+
+#### `useAllAtomsValue` - 모든 Atom 읽기 전용
+```tsx
+function DisplayAll() {
+  const allAtoms = useAllAtomsValue();
+
+  return <pre>{JSON.stringify(allAtoms, null, 2)}</pre>;
+}
+```
+
+#### `useUpdateAllAtoms` - 모든 Atom 쓰기 전용
+```tsx
+function BatchControls() {
+  const updateAllAtoms = useUpdateAllAtoms();
+
+  // 이 컴포넌트는 atom이 변경되어도 리렌더링되지 않습니다
+  const resetAll = () => {
+    updateAllAtoms({
+      primaryCounter: { value: 0, name: "메인", description: "..." },
+      secondaryCounter: { value: 0, name: "보조", description: "..." },
+    });
+  };
+
+  return <button onClick={resetAll}>모두 초기화</button>;
 }
 ```
 
