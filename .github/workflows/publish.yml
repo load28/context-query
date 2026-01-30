@@ -10,6 +10,7 @@ on:
         options:
           - core
           - react
+          - all
       release_type:
         description: 'Release type'
         required: true
@@ -31,80 +32,115 @@ jobs:
     permissions:
       contents: write
       packages: write
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.PACKAGE_KEY }}
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-      
+
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 9.0.0
-      
+
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Calculate and update version
+      - name: Setup npm auth
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
+      - name: Determine packages to publish
+        id: packages
+        run: |
+          PACKAGE="${{ github.event.inputs.package }}"
+          if [[ "$PACKAGE" == "all" ]]; then
+            echo "targets=core react" >> $GITHUB_OUTPUT
+          else
+            echo "targets=$PACKAGE" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Calculate and update versions
         id: version
         run: |
-          cd packages/${{ github.event.inputs.package }}
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
           RELEASE_TYPE="${{ github.event.inputs.release_type }}"
           PREID="${{ github.event.inputs.prerelease_id }}"
 
-          echo "Current version: $CURRENT_VERSION"
-          echo "Release type: $RELEASE_TYPE"
+          for pkg in ${{ steps.packages.outputs.targets }}; do
+            cd packages/$pkg
+            CURRENT_VERSION=$(node -p "require('./package.json').version")
+            echo "[$pkg] Current version: $CURRENT_VERSION"
 
-          if [[ "$RELEASE_TYPE" == "prerelease" ]]; then
-            NEW_VERSION=$(npm version prerelease --preid=$PREID --no-git-tag-version | tr -d 'v')
-            IS_PRERELEASE="true"
-          else
-            NEW_VERSION=$(npm version $RELEASE_TYPE --no-git-tag-version | tr -d 'v')
-            IS_PRERELEASE="false"
+            if [[ "$RELEASE_TYPE" == "prerelease" ]]; then
+              NEW_VERSION=$(npm version prerelease --preid=$PREID --no-git-tag-version | tr -d 'v')
+            else
+              NEW_VERSION=$(npm version $RELEASE_TYPE --no-git-tag-version | tr -d 'v')
+            fi
+
+            echo "[$pkg] New version: $NEW_VERSION"
+            cd ../..
+          done
+
+          PRIMARY_PKG="${{ github.event.inputs.package }}"
+          if [[ "$PRIMARY_PKG" == "all" ]]; then
+            PRIMARY_PKG="core"
           fi
+          NEW_VERSION=$(node -p "require('./packages/$PRIMARY_PKG/package.json').version")
+          IS_PRERELEASE=$([[ "$RELEASE_TYPE" == "prerelease" ]] && echo "true" || echo "false")
 
-          echo "New version: $NEW_VERSION"
-          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "new=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
-      
-      - name: Build package
-        run: pnpm build --filter=@context-query/${{ github.event.inputs.package }}
-      
-      - name: Publish to npm Registry
+
+      - name: Build all packages
         run: |
-          cd packages/${{ github.event.inputs.package }}
-          if [[ "${{ steps.version.outputs.is_prerelease }}" == "true" ]]; then
-            npm publish --tag prerelease --registry=https://registry.npmjs.org --//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
-            echo "Published ${{ steps.version.outputs.new }} as prerelease"
-          else
-            npm publish --registry=https://registry.npmjs.org --//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
-            echo "Published ${{ steps.version.outputs.new }} as latest"
-          fi
-      
+          pnpm --filter @context-query/core build
+          pnpm --filter @context-query/react build
+
+      - name: Publish packages
+        run: |
+          for pkg in ${{ steps.packages.outputs.targets }}; do
+            cd packages/$pkg
+            if [[ "${{ steps.version.outputs.is_prerelease }}" == "true" ]]; then
+              pnpm publish --tag prerelease --no-git-checks --access public
+              echo "Published @context-query/$pkg as prerelease"
+            else
+              pnpm publish --no-git-checks --access public
+              echo "Published @context-query/$pkg as latest"
+            fi
+            cd ../..
+          done
+
       - name: Commit version change
         if: steps.version.outputs.is_prerelease == 'false'
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
-          git add packages/${{ github.event.inputs.package }}/package.json
-          git commit -m "chore: bump @context-query/${{ github.event.inputs.package }} to v${{ steps.version.outputs.new }}"
+          for pkg in ${{ steps.packages.outputs.targets }}; do
+            git add packages/$pkg/package.json
+          done
+          PACKAGE="${{ github.event.inputs.package }}"
+          if [[ "$PACKAGE" == "all" ]]; then
+            git commit -m "chore: bump all packages to v${{ steps.version.outputs.new }}"
+          else
+            git commit -m "chore: bump @context-query/$PACKAGE to v${{ steps.version.outputs.new }}"
+          fi
           git push
 
-      - name: Create Git tag
+      - name: Create Git tags
         if: steps.version.outputs.is_prerelease == 'false'
         run: |
-          TAG_NAME="${{ github.event.inputs.package }}-v${{ steps.version.outputs.new }}"
-          git tag $TAG_NAME
-          git push origin $TAG_NAME
-          echo "Created tag: $TAG_NAME"
+          for pkg in ${{ steps.packages.outputs.targets }}; do
+            TAG_NAME="${pkg}-v$(node -p "require('./packages/$pkg/package.json').version")"
+            git tag $TAG_NAME
+            git push origin $TAG_NAME
+            echo "Created tag: $TAG_NAME"
+          done
 
       - name: Create GitHub Release
         if: steps.version.outputs.is_prerelease == 'false'
@@ -121,11 +157,7 @@ jobs:
 
             ### Installation
             ```bash
-            # Install specific version
             npm install @context-query/${{ github.event.inputs.package }}@${{ steps.version.outputs.new }}
-
-            # Install latest stable version
-            npm install @context-query/${{ github.event.inputs.package }}@latest
             ```
           draft: false
           prerelease: false
