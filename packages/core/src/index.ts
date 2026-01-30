@@ -1,3 +1,3 @@
-export { ContextQueryStore } from "./store";
-export { AtomStore } from "./atom-store";
+export { ContextQueryStore } from "./contextQueryStore";
+export { AtomStore } from "./atomStore";
 export * from "./types";

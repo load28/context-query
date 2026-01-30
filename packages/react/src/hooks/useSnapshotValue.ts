@@ -1,8 +1,8 @@
 import { useCallback, useSyncExternalStore } from "react";
-import { createStoreContext } from "../context";
-import { createUseStoreContext } from "../use-store-context";
+import { createStoreContext } from "../internals/createStoreContext";
+import { createUseStoreContext } from "../internals/useStoreContext";
 
-export function createUseAllAtomsValue<TAtoms extends Record<string, any>>(
+export function createUseSnapshotValue<TAtoms extends Record<string, any>>(
   StoreContext: ReturnType<typeof createStoreContext<TAtoms>>
 ) {
   const useStoreContext = createUseStoreContext<TAtoms>(StoreContext);
@@ -12,7 +12,7 @@ export function createUseAllAtomsValue<TAtoms extends Record<string, any>>(
 
     const subscribe = useCallback(
       (callback: () => void) => {
-        const subscription = store.subscribeAll(() => {
+        const subscription = store.subscribe(() => {
           callback();
         });
         return () => subscription.unsubscribe();
@@ -21,7 +21,7 @@ export function createUseAllAtomsValue<TAtoms extends Record<string, any>>(
     );
 
     const getSnapshot = useCallback(
-      () => store.getAllAtomValues(),
+      () => store.getSnapshot(),
       [store]
     );
 

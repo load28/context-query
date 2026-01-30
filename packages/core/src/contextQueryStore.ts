@@ -1,10 +1,10 @@
-import { AtomStore } from "./atom-store";
+import { AtomStore } from "./atomStore";
 import { AtomListener, Subscription } from "./types";
 
 export class ContextQueryStore<TAtoms extends Record<string, any>> {
   private atoms: Map<keyof TAtoms, AtomStore<any>>;
-  private cachedAllValues: TAtoms | null = null;
-  private allValuesDirty: boolean = true;
+  private cachedSnapshot: TAtoms | null = null;
+  private snapshotStale: boolean = true;
 
   constructor(initialValues: TAtoms) {
     this.atoms = new Map();
@@ -14,7 +14,7 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
       this.atoms.set(key as keyof TAtoms, atomStore);
 
       atomStore.subscribe(() => {
-        this.allValuesDirty = true;
+        this.snapshotStale = true;
       });
     });
   }
@@ -42,16 +42,12 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
     key: TKey,
     listener: AtomListener
   ): Subscription {
-    const atomListener = (value: TAtoms[TKey]) => {
-      listener(key, value);
-    };
-
-    return this.getAtom(key).subscribe(atomListener);
+    return this.getAtom(key).subscribe(listener);
   }
 
-  public getAllAtomValues(): TAtoms {
-    if (!this.allValuesDirty && this.cachedAllValues !== null) {
-      return this.cachedAllValues;
+  public getSnapshot(): TAtoms {
+    if (!this.snapshotStale && this.cachedSnapshot !== null) {
+      return this.cachedSnapshot;
     }
 
     const result = {} as TAtoms;
@@ -59,12 +55,12 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
       result[key] = atomStore.getValue();
     });
 
-    this.cachedAllValues = result;
-    this.allValuesDirty = false;
+    this.cachedSnapshot = result;
+    this.snapshotStale = false;
     return result;
   }
 
-  public updateAllAtoms(newAtoms: Partial<TAtoms>): void {
+  public patch(newAtoms: Partial<TAtoms>): void {
     Object.entries(newAtoms).forEach(([key, value]) => {
       const atomStore = this.atoms.get(key as keyof TAtoms);
       if (atomStore) {
@@ -73,14 +69,14 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
     });
   }
 
-  public subscribeAll(
+  public subscribe(
     callback: (values: TAtoms) => void
   ): Subscription {
     const subscriptions: Subscription[] = [];
 
     this.atoms.forEach((atomStore) => {
       const sub = atomStore.subscribe(() => {
-        callback(this.getAllAtomValues());
+        callback(this.getSnapshot());
       });
       subscriptions.push(sub);
     });

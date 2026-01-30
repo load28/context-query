@@ -1,6 +1,6 @@
-import { createStoreContext } from "../context";
-import { createUseStoreContext } from "../use-store-context";
-import { useAtomSubscription } from "../use-atom-subscription";
+import { createStoreContext } from "../internals/createStoreContext";
+import { createUseStoreContext } from "../internals/useStoreContext";
+import { useAtomSubscription } from "../internals/useAtomSubscription";
 
 export function createUseContextAtomValue<TAtoms extends Record<string, any>>(
   StoreContext: ReturnType<typeof createStoreContext<TAtoms>>

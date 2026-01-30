@@ -1,6 +1,6 @@
 import { ContextQueryStore } from "@context-query/core";
 import { PropsWithChildren, useMemo } from "react";
-import { createStoreContext } from "./context";
+import { createStoreContext } from "./internals/createStoreContext";
 
 type AtomValues<T extends Record<string, any>> = {
   [K in keyof T]: T[K];

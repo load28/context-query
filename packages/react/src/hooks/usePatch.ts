@@ -1,8 +1,8 @@
 import { useCallback } from "react";
-import { createStoreContext } from "../context";
-import { createUseStoreContext } from "../use-store-context";
+import { createStoreContext } from "../internals/createStoreContext";
+import { createUseStoreContext } from "../internals/useStoreContext";
 
-export function createUseUpdateAllAtoms<TAtoms extends Record<string, any>>(
+export function createUsePatch<TAtoms extends Record<string, any>>(
   StoreContext: ReturnType<typeof createStoreContext<TAtoms>>
 ) {
   const useStoreContext = createUseStoreContext<TAtoms>(StoreContext);
@@ -12,7 +12,7 @@ export function createUseUpdateAllAtoms<TAtoms extends Record<string, any>>(
 
     return useCallback(
       (newAtoms: Partial<TAtoms>) => {
-        store.updateAllAtoms(newAtoms);
+        store.patch(newAtoms);
       },
       [store]
     );

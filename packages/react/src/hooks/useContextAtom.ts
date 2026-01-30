@@ -1,20 +1,19 @@
+import type { ContextQueryStore } from "@context-query/core";
 import { useCallback } from "react";
-import { createStoreContext } from "../context";
-import { createUseStoreContext } from "../use-store-context";
+import { createStoreContext } from "../internals/createStoreContext";
+import { createUseStoreContext } from "../internals/useStoreContext";
+import { useAtomSubscription } from "../internals/useAtomSubscription";
 
-export function createUseContextSetAtom<TAtoms extends Record<string, any>>(
+export function createUseContextAtom<TAtoms extends Record<string, any>>(
   StoreContext: ReturnType<typeof createStoreContext<TAtoms>>
 ) {
   const useStoreContext = createUseStoreContext<TAtoms>(StoreContext);
 
-  return <TKey extends keyof TAtoms>(
-    key: TKey
-  ): ((
-    value: TAtoms[TKey] | ((prev: TAtoms[TKey]) => TAtoms[TKey])
-  ) => void) => {
+  return <TKey extends keyof TAtoms>(key: TKey) => {
     const store = useStoreContext();
+    const value = useAtomSubscription(store, key);
 
-    return useCallback(
+    const setAtom = useCallback(
       (newValue: TAtoms[TKey] | ((prev: TAtoms[TKey]) => TAtoms[TKey])) => {
         const currentValue = store.getAtomValue(key);
         const updatedValue =
@@ -26,5 +25,7 @@ export function createUseContextSetAtom<TAtoms extends Record<string, any>>(
       },
       [key, store]
     );
+
+    return [value, setAtom] as const;
   };
 }

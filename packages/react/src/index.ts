@@ -3,11 +3,11 @@ import {
   createUseContextAtomValue,
   createUseContextSetAtom,
   createUseStore,
-  createUseAllAtoms,
-  createUseAllAtomsValue,
-  createUseUpdateAllAtoms
+  createUseSnapshot,
+  createUseSnapshotValue,
+  createUsePatch
 } from "./hooks";
-import { createReactContextQuery } from "./provider";
+import { createReactContextQuery } from "./createProvider";
 
 export function createContextQuery<TAtoms extends Record<string, any>>() {
   const { ContextQueryProvider, StoreContext } =
@@ -17,9 +17,9 @@ export function createContextQuery<TAtoms extends Record<string, any>>() {
   const useContextAtomValue = createUseContextAtomValue<TAtoms>(StoreContext);
   const useContextSetAtom = createUseContextSetAtom<TAtoms>(StoreContext);
   const useStore = createUseStore<TAtoms>(StoreContext);
-  const useAllAtoms = createUseAllAtoms<TAtoms>(StoreContext);
-  const useAllAtomsValue = createUseAllAtomsValue<TAtoms>(StoreContext);
-  const useUpdateAllAtoms = createUseUpdateAllAtoms<TAtoms>(StoreContext);
+  const useSnapshot = createUseSnapshot<TAtoms>(StoreContext);
+  const useSnapshotValue = createUseSnapshotValue<TAtoms>(StoreContext);
+  const usePatch = createUsePatch<TAtoms>(StoreContext);
 
   return {
     ContextQueryProvider,
@@ -27,8 +27,8 @@ export function createContextQuery<TAtoms extends Record<string, any>>() {
     useContextAtomValue,
     useContextSetAtom,
     useStore,
-    useAllAtoms,
-    useAllAtomsValue,
-    useUpdateAllAtoms,
+    useSnapshot,
+    useSnapshotValue,
+    usePatch,
   };
 }

@@ -1,6 +1,6 @@
 import type { ContextQueryStore } from "@context-query/core";
 import { useContext } from "react";
-import { createStoreContext } from "./context";
+import { createStoreContext } from "./createStoreContext";
 
 export function createUseStoreContext<TAtoms extends Record<string, any>>(
   StoreContext: ReturnType<typeof createStoreContext<TAtoms>>
