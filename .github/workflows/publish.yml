@@ -142,22 +142,23 @@ jobs:
             echo "Created tag: $TAG_NAME"
           done
 
-      - name: Create GitHub Release
+      - name: Create GitHub Releases
         if: steps.version.outputs.is_prerelease == 'false'
-        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.PACKAGE_KEY }}
-        with:
-          tag_name: ${{ github.event.inputs.package }}-v${{ steps.version.outputs.new }}
-          release_name: "@context-query/${{ github.event.inputs.package }} v${{ steps.version.outputs.new }}"
-          body: |
-            ## @context-query/${{ github.event.inputs.package }} v${{ steps.version.outputs.new }}
+        run: |
+          for pkg in ${{ steps.packages.outputs.targets }}; do
+            PKG_VERSION=$(node -p "require('./packages/$pkg/package.json').version")
+            TAG_NAME="${pkg}-v${PKG_VERSION}"
 
-            Published to npm registry.
+            gh release create "$TAG_NAME" \
+              --title "@context-query/${pkg} v${PKG_VERSION}" \
+              --notes "## @context-query/${pkg} v${PKG_VERSION}
 
-            ### Installation
-            ```bash
-            npm install @context-query/${{ github.event.inputs.package }}@${{ steps.version.outputs.new }}
-            ```
-          draft: false
-          prerelease: false
+          Published to npm registry.
+
+          ### Installation
+          \`\`\`bash
+          npm install @context-query/${pkg}@${PKG_VERSION}
+          \`\`\`"
+          done
