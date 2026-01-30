@@ -1,6 +1,6 @@
 {
   "name": "@context-query/react",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "license": "MIT",
   "description": "React bindings for ContextQuery",
   "author": "Minyeoung Seo <tjalsdud89@naver.com>",
