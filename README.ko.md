@@ -228,9 +228,9 @@ const {
   useContextAtomValue,   // atom에 대한 읽기 전용 액세스
   useContextSetAtom,     // atom에 대한 쓰기 전용 액세스
   useStore,              // 스토어 직접 액세스
-  useAllAtoms,           // 모든 atom에 대한 읽기-쓰기 액세스
-  useAllAtomsValue,      // 모든 atom에 대한 읽기 전용 액세스
-  useUpdateAllAtoms,     // 모든 atom에 대한 쓰기 전용 액세스
+  useSnapshot,           // 모든 atom에 대한 읽기-쓰기 액세스
+  useSnapshotValue,      // 모든 atom에 대한 읽기 전용 액세스
+  usePatch,              // 모든 atom에 대한 쓰기 전용 액세스
 } = createContextQuery<YourAtomTypes>();
 ```
 
@@ -287,15 +287,15 @@ function AdvancedComponent() {
 }
 ```
 
-#### `useAllAtoms` - 모든 Atom 읽기 & 쓰기
+#### `useSnapshot` - 모든 Atom 읽기 & 쓰기
 ```tsx
 function BatchComponent() {
-  const [allAtoms, updateAllAtoms] = useAllAtoms();
+  const [snapshot, patch] = useSnapshot();
 
   const resetAll = () => {
-    updateAllAtoms({
-      primaryCounter: { ...allAtoms.primaryCounter, value: 0 },
-      secondaryCounter: { ...allAtoms.secondaryCounter, value: 0 },
+    patch({
+      primaryCounter: { ...snapshot.primaryCounter, value: 0 },
+      secondaryCounter: { ...snapshot.secondaryCounter, value: 0 },
     });
   };
 
@@ -303,23 +303,23 @@ function BatchComponent() {
 }
 ```
 
-#### `useAllAtomsValue` - 모든 Atom 읽기 전용
+#### `useSnapshotValue` - 모든 Atom 읽기 전용
 ```tsx
 function DisplayAll() {
-  const allAtoms = useAllAtomsValue();
+  const snapshot = useSnapshotValue();
 
-  return <pre>{JSON.stringify(allAtoms, null, 2)}</pre>;
+  return <pre>{JSON.stringify(snapshot, null, 2)}</pre>;
 }
 ```
 
-#### `useUpdateAllAtoms` - 모든 Atom 쓰기 전용
+#### `usePatch` - 모든 Atom 쓰기 전용
 ```tsx
 function BatchControls() {
-  const updateAllAtoms = useUpdateAllAtoms();
+  const patch = usePatch();
 
   // 이 컴포넌트는 atom이 변경되어도 리렌더링되지 않습니다
   const resetAll = () => {
-    updateAllAtoms({
+    patch({
       primaryCounter: { value: 0, name: "메인", description: "..." },
       secondaryCounter: { value: 0, name: "보조", description: "..." },
     });

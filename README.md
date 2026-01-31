@@ -228,9 +228,9 @@ const {
   useContextAtomValue,   // Read-only access to an atom
   useContextSetAtom,     // Write-only access to an atom
   useStore,              // Direct store access
-  useAllAtoms,           // Read-write access to all atoms
-  useAllAtomsValue,      // Read-only access to all atoms
-  useUpdateAllAtoms,     // Write-only access to all atoms
+  useSnapshot,           // Read-write access to all atoms
+  useSnapshotValue,      // Read-only access to all atoms
+  usePatch,              // Write-only access to all atoms
 } = createContextQuery<YourAtomTypes>();
 ```
 
@@ -287,15 +287,15 @@ function AdvancedComponent() {
 }
 ```
 
-#### `useAllAtoms` - Read & Write All Atoms
+#### `useSnapshot` - Read & Write All Atoms
 ```tsx
 function BatchComponent() {
-  const [allAtoms, updateAllAtoms] = useAllAtoms();
+  const [snapshot, patch] = useSnapshot();
 
   const resetAll = () => {
-    updateAllAtoms({
-      primaryCounter: { ...allAtoms.primaryCounter, value: 0 },
-      secondaryCounter: { ...allAtoms.secondaryCounter, value: 0 },
+    patch({
+      primaryCounter: { ...snapshot.primaryCounter, value: 0 },
+      secondaryCounter: { ...snapshot.secondaryCounter, value: 0 },
     });
   };
 
@@ -303,23 +303,23 @@ function BatchComponent() {
 }
 ```
 
-#### `useAllAtomsValue` - Read Only All Atoms
+#### `useSnapshotValue` - Read Only All Atoms
 ```tsx
 function DisplayAll() {
-  const allAtoms = useAllAtomsValue();
+  const snapshot = useSnapshotValue();
 
-  return <pre>{JSON.stringify(allAtoms, null, 2)}</pre>;
+  return <pre>{JSON.stringify(snapshot, null, 2)}</pre>;
 }
 ```
 
-#### `useUpdateAllAtoms` - Write Only All Atoms
+#### `usePatch` - Write Only All Atoms
 ```tsx
 function BatchControls() {
-  const updateAllAtoms = useUpdateAllAtoms();
+  const patch = usePatch();
 
   // This component won't re-render when atoms change
   const resetAll = () => {
-    updateAllAtoms({
+    patch({
       primaryCounter: { value: 0, name: "Primary", description: "..." },
       secondaryCounter: { value: 0, name: "Secondary", description: "..." },
     });
