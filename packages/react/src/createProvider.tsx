@@ -1,4 +1,5 @@
-import { ContextQueryStore } from "@context-query/core";
+import { ContextQueryStore, isAtomConfig, atom as atomHelper } from "@context-query/core";
+import { isDerivedAtom } from "@context-query/core";
 import { PropsWithChildren, useMemo } from "react";
 import { createStoreContext } from "./internals/createStoreContext";
 
@@ -7,7 +8,7 @@ type AtomValues<T extends Record<string, any>> = {
 };
 
 export function createReactContextQuery<TAtoms extends Record<string, any>>(
-  derivedDefs?: Record<string, any>
+  configDefs?: Record<string, any>
 ) {
   const StoreContext = createStoreContext<TAtoms>();
 
@@ -17,9 +18,24 @@ export function createReactContextQuery<TAtoms extends Record<string, any>>(
   }: PropsWithChildren<{ atoms: AtomValues<TAtoms> }>) {
     const store = useMemo(
       () => {
-        const storeValues = derivedDefs
-          ? { ...atoms, ...derivedDefs }
-          : atoms;
+        if (!configDefs) {
+          return new ContextQueryStore<TAtoms>(atoms);
+        }
+
+        const storeValues: Record<string, any> = { ...atoms };
+
+        for (const [key, config] of Object.entries(configDefs)) {
+          if (isDerivedAtom(config)) {
+            storeValues[key] = config;
+          } else if (isAtomConfig(config)) {
+            // Use Provider's value if available, otherwise definition's initial value
+            const initialVal = key in atoms ? (atoms as any)[key] : config.initialValue;
+            storeValues[key] = atomHelper(initialVal, {
+              equalityFn: config.equalityFn,
+            });
+          }
+        }
+
         return new ContextQueryStore<TAtoms>(storeValues);
       },
       [atoms]

@@ -1,7 +1,8 @@
 import { AtomStore } from "./atomStore";
 import { DerivedAtomStore } from "./derivedAtomStore";
 import { isDerivedAtom } from "./derived";
-import { AtomListener, Subscription } from "./types";
+import { isAtomConfig } from "./atom";
+import { AtomListener, Subscription, RESET } from "./types";
 
 type AnyStore<T = any> = {
   getValue(): T;
@@ -12,6 +13,7 @@ type AnyStore<T = any> = {
 export class ContextQueryStore<TAtoms extends Record<string, any>> {
   private atoms: Map<keyof TAtoms, AnyStore>;
   private derivedKeys: Set<keyof TAtoms> = new Set();
+  private initialValues: Map<keyof TAtoms, any> = new Map();
   private cachedSnapshot: TAtoms | null = null;
   private snapshotStale: boolean = true;
 
@@ -25,9 +27,14 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
       if (isDerivedAtom(value)) {
         derivedEntries.push([key, value]);
         this.derivedKeys.add(key as keyof TAtoms);
+      } else if (isAtomConfig(value)) {
+        const atomStore = new AtomStore(value.initialValue, value.equalityFn);
+        this.atoms.set(key as keyof TAtoms, atomStore);
+        this.initialValues.set(key as keyof TAtoms, value.initialValue);
       } else {
         const atomStore = new AtomStore(value);
         this.atoms.set(key as keyof TAtoms, atomStore);
+        this.initialValues.set(key as keyof TAtoms, value);
       }
     });
 
@@ -76,12 +83,30 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
 
   public setAtomValue<TKey extends keyof TAtoms>(
     key: TKey,
-    value: TAtoms[TKey]
+    value: TAtoms[TKey] | RESET
   ): void {
     if (this.derivedKeys.has(key)) {
       throw new Error(`Cannot set value of derived atom "${String(key)}"`);
     }
+    if (value === RESET) {
+      this.resetAtom(key);
+      return;
+    }
     this.getAtom(key).setValue(value);
+  }
+
+  public resetAtom<TKey extends keyof TAtoms>(key: TKey): void {
+    if (this.derivedKeys.has(key)) {
+      throw new Error(`Cannot reset derived atom "${String(key)}"`);
+    }
+    const initial = this.initialValues.get(key);
+    this.getAtom(key).setValue(initial);
+  }
+
+  public resetAll(): void {
+    this.initialValues.forEach((initialValue, key) => {
+      this.getAtom(key).setValue(initialValue);
+    });
   }
 
   public subscribeToAtom<TKey extends keyof TAtoms>(
