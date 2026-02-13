@@ -23,7 +23,8 @@ export class AtomStore<T> {
   }
 
   private notifyListeners(): void {
-    this.listeners.forEach((listener) => listener());
+    const snapshot = [...this.listeners];
+    snapshot.forEach((listener) => listener());
   }
 
   public subscribe(listener: AtomListener): Subscription {

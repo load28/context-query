@@ -6,15 +6,22 @@ type AtomValues<T extends Record<string, any>> = {
   [K in keyof T]: T[K];
 };
 
-export function createReactContextQuery<TAtoms extends Record<string, any>>() {
+export function createReactContextQuery<TAtoms extends Record<string, any>>(
+  derivedDefs?: Record<string, any>
+) {
   const StoreContext = createStoreContext<TAtoms>();
-  
+
   const ContextQueryProvider = function ContextQueryProvider({
     children,
     atoms,
   }: PropsWithChildren<{ atoms: AtomValues<TAtoms> }>) {
     const store = useMemo(
-      () => new ContextQueryStore<TAtoms>(atoms),
+      () => {
+        const storeValues = derivedDefs
+          ? { ...atoms, ...derivedDefs }
+          : atoms;
+        return new ContextQueryStore<TAtoms>(storeValues);
+      },
       [atoms]
     );
 
