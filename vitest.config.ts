@@ -6,6 +6,7 @@ export default defineConfig({
     conditions: ['development'],
     alias: {
       '@context-query/core': path.resolve(__dirname, 'packages/core/src/index.ts'),
+      '@context-query/react': path.resolve(__dirname, 'packages/react/src/index.ts'),
     },
   },
   test: {
