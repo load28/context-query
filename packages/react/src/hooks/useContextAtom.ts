@@ -1,5 +1,5 @@
 import type { ContextQueryStore } from "@context-query/core";
-import { useCallback } from "react";
+import { useCallback, useDebugValue } from "react";
 import { createStoreContext } from "../internals/createStoreContext";
 import { createUseStoreContext } from "../internals/useStoreContext";
 import { useAtomSubscription } from "../internals/useAtomSubscription";
@@ -13,15 +13,23 @@ export function createUseContextAtom<TAtoms extends Record<string, any>>(
     const store = useStoreContext();
     const value = useAtomSubscription(store, key);
 
+    useDebugValue({ key, value });
+
     const setAtom = useCallback(
       (newValue: TAtoms[TKey] | ((prev: TAtoms[TKey]) => TAtoms[TKey])) => {
-        const currentValue = store.getAtomValue(key);
-        const updatedValue =
-          typeof newValue === "function"
-            ? (newValue as Function)(currentValue)
-            : newValue;
-
-        store.setAtomValue(key, updatedValue);
+        if (typeof newValue === "function") {
+          const currentValue = store.getAtomValue(key);
+          let updatedValue: TAtoms[TKey];
+          try {
+            updatedValue = (newValue as Function)(currentValue);
+          } catch {
+            // Function updater threw — atom value stays unchanged
+            return;
+          }
+          store.setAtomValue(key, updatedValue);
+        } else {
+          store.setAtomValue(key, newValue);
+        }
       },
       [key, store]
     );

@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useDebugValue, useSyncExternalStore } from "react";
 import { createStoreContext } from "../internals/createStoreContext";
 import { createUseStoreContext } from "../internals/useStoreContext";
 
@@ -26,6 +26,8 @@ export function createUseSnapshot<TAtoms extends Record<string, any>>(
     );
 
     const allValues = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+    useDebugValue(allValues);
 
     const updateAllAtoms = useCallback(
       (newAtoms: Partial<TAtoms>) => {

@@ -8,6 +8,19 @@ type AnyStore<T = any> = {
   getValue(): T;
   setValue(value: T): void;
   subscribe(listener: AtomListener): Subscription;
+  getSubscriberCount(): number;
+};
+
+export type ContextQueryStoreOptions = {
+  onError?: (error: Error, context: { key?: string; type: 'derived' | 'updater' }) => void;
+};
+
+export type AtomDebugInfo = {
+  value: any;
+  subscriberCount: number;
+  isDerived: boolean;
+  dependencies?: string[];
+  error?: Error | null;
 };
 
 export class ContextQueryStore<TAtoms extends Record<string, any>> {
@@ -16,9 +29,14 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
   private initialValues: Map<keyof TAtoms, any> = new Map();
   private cachedSnapshot: TAtoms | null = null;
   private snapshotStale: boolean = true;
+  private onError?: ContextQueryStoreOptions['onError'];
 
-  constructor(initialValues: { [K in keyof TAtoms]: TAtoms[K] | any }) {
+  constructor(
+    initialValues: { [K in keyof TAtoms]: TAtoms[K] | any },
+    options?: ContextQueryStoreOptions
+  ) {
     this.atoms = new Map();
+    this.onError = options?.onError;
 
     const derivedEntries: Array<[string, { read: (get: (key: string) => any) => any }]> = [];
 
@@ -47,8 +65,15 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
       return store;
     };
 
+    const derivedOnError = this.onError
+      ? (error: Error) => this.onError!(error, { type: 'derived' })
+      : undefined;
+
     for (const [key, config] of derivedEntries) {
-      const derivedStore = new DerivedAtomStore(config.read, resolveStore);
+      const keyOnError = this.onError
+        ? (error: Error) => this.onError!(error, { key, type: 'derived' })
+        : undefined;
+      const derivedStore = new DerivedAtomStore(config.read, resolveStore, keyOnError);
       this.atoms.set(key as keyof TAtoms, derivedStore);
     }
 
@@ -114,6 +139,56 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
     listener: AtomListener
   ): Subscription {
     return this.getAtom(key).subscribe(listener);
+  }
+
+  public getAtomSubscriberCount<TKey extends keyof TAtoms>(key: TKey): number {
+    return this.getAtom(key).getSubscriberCount();
+  }
+
+  public getAtomError<TKey extends keyof TAtoms>(key: TKey): Error | null {
+    const store = this.atoms.get(key);
+    if (!store) {
+      throw new Error(`Atom with key "${String(key)}" not found`);
+    }
+    if (this.derivedKeys.has(key)) {
+      return (store as DerivedAtomStore<any>).getError();
+    }
+    return null;
+  }
+
+  public getDependencyGraph(): Record<string, string[]> {
+    const graph: Record<string, string[]> = {};
+    for (const key of this.derivedKeys) {
+      const store = this.atoms.get(key) as DerivedAtomStore<any>;
+      graph[key as string] = store.getDependencyKeys();
+    }
+    return graph;
+  }
+
+  public getDebugInfo(): Record<string, AtomDebugInfo> {
+    const info: Record<string, AtomDebugInfo> = {};
+    this.atoms.forEach((store, key) => {
+      const isDerived = this.derivedKeys.has(key);
+      const entry: AtomDebugInfo = {
+        value: undefined,
+        subscriberCount: store.getSubscriberCount(),
+        isDerived,
+      };
+
+      if (isDerived) {
+        const derivedStore = store as DerivedAtomStore<any>;
+        entry.dependencies = derivedStore.getDependencyKeys();
+        entry.error = derivedStore.getError();
+        if (!entry.error) {
+          entry.value = store.getValue();
+        }
+      } else {
+        entry.value = store.getValue();
+      }
+
+      info[key as string] = entry;
+    });
+    return info;
   }
 
   public getSnapshot(): TAtoms {

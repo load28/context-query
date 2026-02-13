@@ -2,33 +2,31 @@ import { useCallback, useDebugValue, useSyncExternalStore } from "react";
 import { createStoreContext } from "../internals/createStoreContext";
 import { createUseStoreContext } from "../internals/useStoreContext";
 
-export function createUseSnapshotValue<TAtoms extends Record<string, any>>(
+export function createUseAtomError<TAtoms extends Record<string, any>>(
   StoreContext: ReturnType<typeof createStoreContext<TAtoms>>
 ) {
   const useStoreContext = createUseStoreContext<TAtoms>(StoreContext);
 
-  return (): TAtoms => {
+  return <TKey extends keyof TAtoms>(key: TKey): Error | null => {
     const store = useStoreContext();
 
     const subscribe = useCallback(
       (callback: () => void) => {
-        const subscription = store.subscribe(() => {
-          callback();
-        });
+        const subscription = store.subscribeToAtom(key, callback);
         return () => subscription.unsubscribe();
       },
-      [store]
+      [store, key]
     );
 
     const getSnapshot = useCallback(
-      () => store.getSnapshot(),
-      [store]
+      () => store.getAtomError(key),
+      [store, key]
     );
 
-    const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+    const error = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
-    useDebugValue(snapshot);
+    useDebugValue(error);
 
-    return snapshot;
+    return error;
   };
 }
