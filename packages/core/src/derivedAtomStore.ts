@@ -6,14 +6,20 @@ export class DerivedAtomStore<T> {
   private listeners: Set<AtomListener> = new Set();
   private depUnsubscribes: Subscription[] = [];
   private computing: boolean = false;
+  private trackedDeps: Set<string> = new Set();
+  private error: Error | null = null;
+  private onError?: (error: Error) => void;
 
   constructor(
     private readFn: (get: (key: string) => any) => T,
     private resolveStore: (key: string) => {
       getValue(): any;
       subscribe(listener: AtomListener): Subscription;
-    }
-  ) {}
+    },
+    onError?: (error: Error) => void
+  ) {
+    this.onError = onError;
+  }
 
   /**
    * Called after all stores are registered in ContextQueryStore.
@@ -46,9 +52,32 @@ export class DerivedAtomStore<T> {
     try {
       const newValue = this.readFn(get);
       this.cachedValue = newValue;
+      this.error = null;
       this.dirty = false;
+      this.trackedDeps = newDeps;
 
       // Subscribe to new dependencies
+      for (const dep of newDeps) {
+        const store = this.resolveStore(dep);
+        const sub = store.subscribe(() => this.markDirty());
+        this.depUnsubscribes.push(sub);
+      }
+    } catch (err) {
+      // Circular dependency errors must propagate — they are fatal
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('Circular dependency')) {
+        throw err;
+      }
+
+      this.error = err instanceof Error ? err : new Error(String(err));
+      this.dirty = false;
+      this.trackedDeps = newDeps;
+
+      if (this.onError) {
+        this.onError(this.error);
+      }
+
+      // Still subscribe to deps so we can recover when they change
       for (const dep of newDeps) {
         const store = this.resolveStore(dep);
         const sub = store.subscribe(() => this.markDirty());
@@ -71,11 +100,36 @@ export class DerivedAtomStore<T> {
     if (this.dirty) {
       this.recompute();
     }
+    if (this.error) {
+      throw this.error;
+    }
     return this.cachedValue as T;
+  }
+
+  public hasError(): boolean {
+    if (this.dirty) {
+      this.recompute();
+    }
+    return this.error !== null;
+  }
+
+  public getError(): Error | null {
+    if (this.dirty) {
+      this.recompute();
+    }
+    return this.error;
   }
 
   public setValue(_value: T): void {
     throw new Error('Cannot set value of a derived atom');
+  }
+
+  public getSubscriberCount(): number {
+    return this.listeners.size;
+  }
+
+  public getDependencyKeys(): string[] {
+    return [...this.trackedDeps];
   }
 
   public subscribe(listener: AtomListener): Subscription {

@@ -39,6 +39,10 @@ export class AtomStore<T> {
     snapshot.forEach((listener) => listener());
   }
 
+  public getSubscriberCount(): number {
+    return this.listeners.size;
+  }
+
   public subscribe(listener: AtomListener): Subscription {
     this.listeners.add(listener);
 

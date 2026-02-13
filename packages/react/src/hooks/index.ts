@@ -7,3 +7,4 @@ export { createUseSnapshot } from "./useSnapshot";
 export { createUseSnapshotValue } from "./useSnapshotValue";
 export { createUsePatch } from "./usePatch";
 export { createUseResetAtom } from "./useResetAtom";
+export { createUseAtomError } from "./useAtomError";

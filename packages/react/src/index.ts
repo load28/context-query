@@ -16,6 +16,7 @@ import {
   createUseSnapshotValue,
   createUsePatch,
   createUseResetAtom,
+  createUseAtomError,
 } from "./hooks";
 import { createReactContextQuery } from "./createProvider";
 
@@ -37,6 +38,7 @@ type LegacyResult<TAtoms extends Record<string, any>> = {
   useSnapshotValue: () => TAtoms;
   usePatch: () => (newAtoms: Partial<TAtoms>) => void;
   useResetAtom: <K extends keyof TAtoms & string>(key: K) => () => void;
+  useAtomError: <K extends keyof TAtoms & string>(key: K) => Error | null;
 };
 
 /** Result type for the definitions API (with derived/atom config support) */
@@ -68,6 +70,7 @@ type DefinitionsResult<TDef extends Record<string, any>> = {
     newAtoms: Partial<{ [K in WritableAtomKeys<TDef>]: ResolvedAtoms<TDef>[K] }>
   ) => void;
   useResetAtom: <K extends WritableAtomKeys<TDef> & string>(key: K) => () => void;
+  useAtomError: <K extends keyof ResolvedAtoms<TDef> & string>(key: K) => Error | null;
 };
 
 // Overload 1: Legacy API — no arguments, explicit type parameter
@@ -107,6 +110,7 @@ export function createContextQuery(definitions?: Record<string, any>) {
   const useSnapshotValue = createUseSnapshotValue<any>(StoreContext);
   const usePatch = createUsePatch<any>(StoreContext);
   const useResetAtom = createUseResetAtom<any>(StoreContext);
+  const useAtomError = createUseAtomError<any>(StoreContext);
 
   return {
     ContextQueryProvider,
@@ -119,5 +123,6 @@ export function createContextQuery(definitions?: Record<string, any>) {
     useSnapshotValue,
     usePatch,
     useResetAtom,
+    useAtomError,
   };
 }

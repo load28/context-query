@@ -1,4 +1,4 @@
-import { useCallback, useRef, useSyncExternalStore } from "react";
+import { useCallback, useDebugValue, useRef, useSyncExternalStore } from "react";
 import { createStoreContext } from "../internals/createStoreContext";
 import { createUseStoreContext } from "../internals/useStoreContext";
 
@@ -43,6 +43,10 @@ export function createUseContextAtomSelector<TAtoms extends Record<string, any>>
       return nextResult;
     }, [store, key, selector, equality]);
 
-    return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+    const result = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+    useDebugValue(result);
+
+    return result;
   };
 }

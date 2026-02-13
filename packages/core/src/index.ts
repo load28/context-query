@@ -1,4 +1,5 @@
 export { ContextQueryStore } from "./contextQueryStore";
+export type { ContextQueryStoreOptions, AtomDebugInfo } from "./contextQueryStore";
 export { AtomStore } from "./atomStore";
 export { DerivedAtomStore } from "./derivedAtomStore";
 export { derived, isDerivedAtom } from "./derived";
