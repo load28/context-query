@@ -2,8 +2,9 @@ import "./App.css";
 import { useState } from "react";
 import { BasicDemo } from "./demos/BasicDemo";
 import { ComparisonDemo } from "./demos/ComparisonDemo";
+import { SignalDemo } from "./demos/SignalDemo";
 
-type TabId = "features" | "comparison";
+type TabId = "features" | "comparison" | "signal";
 
 function App() {
   const [tab, setTab] = useState<TabId>("features");
@@ -60,6 +61,14 @@ function App() {
           >
             vs React Context
           </button>
+          <button
+            onClick={() => setTab("signal")}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+              tab === "signal" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Signal Engine
+          </button>
         </div>
       </nav>
 
@@ -67,6 +76,7 @@ function App() {
       <main className="max-w-3xl mx-auto px-4 py-8">
         {tab === "features" && <BasicDemo />}
         {tab === "comparison" && <ComparisonDemo />}
+        {tab === "signal" && <SignalDemo />}
       </main>
     </div>
   );

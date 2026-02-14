@@ -282,7 +282,63 @@ export const useAuthStore = create((set) => ({
 
 ---
 
+## 시그널 엔진 (v0.7.0+)
+
+Context Query v0.7.0부터 내부에 **시그널 기반 반응형 엔진**이 탑재되었습니다. 이를 통해 `derived()` atom을 사용할 수 있으며, 효율적인 상태 전파가 가능합니다.
+
+### derived() - 파생 상태
+
+다른 atom에서 자동으로 계산되는 값을 만들 수 있습니다:
+
+```tsx
+import { derived } from "@context-query/core";
+
+<ProductProvider
+  atoms={{
+    price: 10000,
+    quantity: 2,
+    discount: 0.1,
+    // 가격 * 수량을 자동 계산
+    subtotal: derived((get) => get("price") * get("quantity")),
+    // 할인 적용 최종가를 자동 계산
+    finalPrice: derived((get) => {
+      return Math.round(get("subtotal") * (1 - get("discount")));
+    }),
+  }}
+>
+  {children}
+</ProductProvider>
+```
+
+**핵심 특성:**
+- **지연 평가**: 읽을 때만 계산 (불필요한 연산 방지)
+- **Diamond Problem 해결**: A→B, A→C, B+C→D 패턴에서 D는 A 변경 시 1번만 계산
+- **에러 복구**: 의존성이 정상값으로 돌아오면 파생 atom도 자동 복구
+
+### atom() - 커스텀 동등성 비교
+
+기본 `Object.is` 대신 커스텀 비교 함수를 사용할 수 있습니다:
+
+```tsx
+import { atom, shallowEqual } from "@context-query/core";
+
+<UserProvider
+  atoms={{
+    // 같은 구조의 객체를 다시 설정해도 리렌더링되지 않음
+    user: atom({ name: "홍길동", age: 30 }, { equalityFn: shallowEqual }),
+  }}
+>
+  {children}
+</UserProvider>
+```
+
+### 주의사항
+
+- `derived()` atom에는 값을 직접 설정할 수 없습니다 (읽기 전용)
+- 순환 의존성이 감지되면 에러가 발생합니다
+- `derived()` 내부에서 비동기 작업은 지원되지 않습니다
+
 ## 다음 단계
 
 - [API 레퍼런스](../README.ko.md) - 전체 API 문서
-- [플레이그라운드](../packages/playground) - 실제 동작 예제
+- [라이브 플레이그라운드](https://load28.github.io/context-query/) - 인터랙티브 데모

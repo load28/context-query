@@ -40,10 +40,12 @@ Context Query is not a one-size-fits-all solution. For optimal performance and a
 ## Features
 
 - 🚀 **Granular Re-rendering**: Components only re-render when their specific subscribed state changes
+- ⚡ **Signal-based Reactive Engine**: Push-pull hybrid reactivity inspired by [TC39 Signals](https://github.com/tc39/proposal-signals) and [Alien Signals](https://github.com/nicepkg/alien-signals)
 - 🔄 **Component Lifecycle Integration**: State is automatically cleaned up when provider components unmount
+- 🧮 **Derived State**: Automatically computed values with diamond-problem resolution and lazy evaluation
 - 🔌 **Simple API**: Familiar hook-based API similar to React's `useState`
 - 🧩 **TypeScript Support**: Full type safety with TypeScript
-- 📦 **Lightweight**: Minimal bundle size with zero dependencies
+- 📦 **Lightweight**: ~2.8KB gzipped (core) with zero dependencies
 - 🔧 **Compatible**: Works alongside existing state management solutions
 
 ## Installation
@@ -215,6 +217,94 @@ This example demonstrates:
 3. **Read-Write Separation**: Use `useContextAtom` for read-write access, `useContextAtomValue` for read-only access, and `useContextSetAtom` for write-only access
 4. **Cross-Atom Updates**: Components can update multiple atoms independently
 
+## Architecture
+
+Context Query is powered by a **signal-based reactive engine** that provides efficient state propagation:
+
+```
+┌─────────────────────────────────────────────────┐
+│  React Hooks Layer (@context-query/react)        │
+│  useContextAtom, useSnapshot, usePatch, ...      │
+├─────────────────────────────────────────────────┤
+│  Store Layer (@context-query/core)               │
+│  ContextQueryStore, AtomStore, DerivedAtomStore   │
+├─────────────────────────────────────────────────┤
+│  Signal Engine (internal)                        │
+│  signal → computed → effect (push-pull hybrid)   │
+│  Diamond problem resolution, batch updates       │
+└─────────────────────────────────────────────────┘
+```
+
+Each `ContextQueryProvider` creates an isolated reactive system, ensuring multiple providers never interfere with each other.
+
+## Derived State
+
+Use `derived()` to create computed atoms that automatically update when their dependencies change:
+
+```tsx
+import { createContextQuery } from "@context-query/react";
+import { derived } from "@context-query/core";
+
+type CartAtoms = {
+  items: Array<{ name: string; price: number; qty: number }>;
+  discount: number;
+  totalPrice: number;
+  finalPrice: number;
+};
+
+const { ContextQueryProvider, useContextAtomValue } = createContextQuery<CartAtoms>();
+
+function CartApp() {
+  return (
+    <ContextQueryProvider
+      atoms={{
+        items: [
+          { name: "Laptop", price: 1200, qty: 1 },
+          { name: "Mouse", price: 35, qty: 2 },
+        ],
+        discount: 0.1,
+        totalPrice: derived((get) => {
+          const items = get("items");
+          return items.reduce((sum, item) => sum + item.price * item.qty, 0);
+        }),
+        finalPrice: derived((get) => {
+          return Math.round(get("totalPrice") * (1 - get("discount")));
+        }),
+      }}
+    >
+      <CartSummary />
+    </ContextQueryProvider>
+  );
+}
+
+function CartSummary() {
+  const total = useContextAtomValue("totalPrice");    // auto-computed
+  const final = useContextAtomValue("finalPrice");    // auto-computed
+  return <div>Total: ${total} → Final: ${final}</div>;
+}
+```
+
+Derived atoms are **lazy** (only computed when read) and **efficient** (diamond dependencies are resolved in a single pass).
+
+## Atom Configuration
+
+Use `atom()` to configure custom equality for atoms, preventing unnecessary re-renders:
+
+```tsx
+import { atom } from "@context-query/core";
+import { shallowEqual } from "@context-query/core";
+
+<ContextQueryProvider
+  atoms={{
+    // With shallowEqual, setting { name: "John", age: 30 } again won't trigger re-renders
+    user: atom({ name: "John", age: 30 }, { equalityFn: shallowEqual }),
+    label: derived((get) => `Hello, ${get("user").name}`),
+  }}
+>
+  {children}
+</ContextQueryProvider>
+```
+
 ## Advanced Usage
 
 ### Available Hooks
@@ -380,13 +470,17 @@ function CounterSection({ title }) {
 
 Each provider maintains its own state, so changing one counter won't affect the other.
 
+## Live Playground
+
+Try the interactive playground: [https://load28.github.io/context-query/](https://load28.github.io/context-query/)
+
 ## Project Structure
 
 The project consists of multiple packages:
 
-- `@context-query/core`: Core functionality and state management
+- `@context-query/core`: Core signal engine, store layer, and state management
 - `@context-query/react`: React bindings and hooks
-- `playground`: Demo application showcasing the library
+- `playground`: Interactive demo application ([live](https://load28.github.io/context-query/))
 
 ## Development
 

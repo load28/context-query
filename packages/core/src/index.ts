@@ -7,4 +7,6 @@ export type { DerivedAtomConfig } from "./derived";
 export { atom, isAtomConfig } from "./atom";
 export type { AtomConfig } from "./atom";
 export { shallowEqual } from "./shallowEqual";
+export { createReactiveSystem } from "./signal/system";
+export type { ReactiveSystem } from "./signal/system";
 export * from "./types";

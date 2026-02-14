@@ -40,10 +40,12 @@ Context Query는 모든 상황에 적합한 만능 솔루션이 아닙니다. �
 ## 특징
 
 - 🚀 **세밀한 리렌더링**: 구독한 특정 상태가 변경될 때만 컴포넌트가 리렌더링됩니다
+- ⚡ **시그널 기반 반응형 엔진**: [TC39 Signals](https://github.com/tc39/proposal-signals) 및 [Alien Signals](https://github.com/nicepkg/alien-signals)에서 영감받은 Push-Pull 하이브리드 반응성
 - 🔄 **컴포넌트 라이프사이클 통합**: 프로바이더 컴포넌트가 언마운트되면 상태가 자동으로 정리됩니다
+- 🧮 **파생 상태**: Diamond Problem 해결 및 지연 평가를 지원하는 자동 계산 값
 - 🔌 **간단한 API**: React의 `useState`와 유사한 친숙한 훅 기반 API
 - 🧩 **타입스크립트 지원**: 타입스크립트로 완전한 타입 안전성 제공
-- 📦 **경량**: 의존성 없는 최소한의 번들 크기
+- 📦 **경량**: ~2.8KB gzipped (core), 의존성 없음
 - 🔧 **호환성**: 기존 상태 관리 솔루션과 함께 사용 가능
 
 ## 설치
@@ -215,6 +217,94 @@ function BatchUpdateComponent() {
 3. **읽기-쓰기 분리**: 읽기-쓰기 액세스는 `useContextAtom`, 읽기 전용은 `useContextAtomValue`, 쓰기 전용은 `useContextSetAtom` 사용
 4. **Atom 간 업데이트**: 컴포넌트는 여러 atom을 독립적으로 업데이트 가능
 
+## 아키텍처
+
+Context Query는 **시그널 기반 반응형 엔진**을 통해 효율적인 상태 전파를 제공합니다:
+
+```
+┌─────────────────────────────────────────────────┐
+│  React Hooks 계층 (@context-query/react)         │
+│  useContextAtom, useSnapshot, usePatch, ...      │
+├─────────────────────────────────────────────────┤
+│  Store 계층 (@context-query/core)                │
+│  ContextQueryStore, AtomStore, DerivedAtomStore   │
+├─────────────────────────────────────────────────┤
+│  Signal Engine (내부)                            │
+│  signal → computed → effect (push-pull hybrid)   │
+│  Diamond problem 해결, 배치 업데이트              │
+└─────────────────────────────────────────────────┘
+```
+
+각 `ContextQueryProvider`는 독립된 반응형 시스템을 생성하여, 여러 프로바이더가 서로 간섭하지 않습니다.
+
+## 파생 상태 (Derived State)
+
+`derived()`를 사용하여 의존성이 변경될 때 자동으로 업데이트되는 계산된 atom을 만들 수 있습니다:
+
+```tsx
+import { createContextQuery } from "@context-query/react";
+import { derived } from "@context-query/core";
+
+type CartAtoms = {
+  items: Array<{ name: string; price: number; qty: number }>;
+  discount: number;
+  totalPrice: number;
+  finalPrice: number;
+};
+
+const { ContextQueryProvider, useContextAtomValue } = createContextQuery<CartAtoms>();
+
+function CartApp() {
+  return (
+    <ContextQueryProvider
+      atoms={{
+        items: [
+          { name: "노트북", price: 1200000, qty: 1 },
+          { name: "마우스", price: 35000, qty: 2 },
+        ],
+        discount: 0.1,
+        totalPrice: derived((get) => {
+          const items = get("items");
+          return items.reduce((sum, item) => sum + item.price * item.qty, 0);
+        }),
+        finalPrice: derived((get) => {
+          return Math.round(get("totalPrice") * (1 - get("discount")));
+        }),
+      }}
+    >
+      <CartSummary />
+    </ContextQueryProvider>
+  );
+}
+
+function CartSummary() {
+  const total = useContextAtomValue("totalPrice");    // 자동 계산
+  const final = useContextAtomValue("finalPrice");    // 자동 계산
+  return <div>합계: {total}원 → 최종가: {final}원</div>;
+}
+```
+
+파생 atom은 **지연 평가**(읽을 때만 계산)되며, **효율적**(다이아몬드 의존성이 한 번의 패스로 해결)입니다.
+
+## Atom 설정
+
+`atom()`을 사용하여 커스텀 동등성 비교를 설정하면 불필요한 리렌더링을 방지할 수 있습니다:
+
+```tsx
+import { atom } from "@context-query/core";
+import { shallowEqual } from "@context-query/core";
+
+<ContextQueryProvider
+  atoms={{
+    // shallowEqual을 사용하면 { name: "John", age: 30 }을 다시 설정해도 리렌더링되지 않습니다
+    user: atom({ name: "John", age: 30 }, { equalityFn: shallowEqual }),
+    label: derived((get) => `안녕하세요, ${get("user").name}님`),
+  }}
+>
+  {children}
+</ContextQueryProvider>
+```
+
 ## 고급 사용법
 
 ### 사용 가능한 훅들
@@ -380,13 +470,17 @@ function CounterSection({ title }) {
 
 각 프로바이더는 자체 상태를 가지므로 한 쪽의 카운터를 변경해도 다른 쪽에 영향을 주지 않습니다.
 
+## 라이브 플레이그라운드
+
+인터랙티브 플레이그라운드를 직접 체험해보세요: [https://load28.github.io/context-query/](https://load28.github.io/context-query/)
+
 ## 프로젝트 구조
 
 이 프로젝트는 여러 패키지로 구성되어 있습니다:
 
-- `@context-query/core`: 핵심 기능 및 상태 관리
+- `@context-query/core`: 시그널 엔진, 스토어 계층, 상태 관리
 - `@context-query/react`: React 바인딩 및 훅
-- `playground`: 라이브러리 사용 예제 애플리케이션
+- `playground`: 인터랙티브 데모 애플리케이션 ([라이브](https://load28.github.io/context-query/))
 
 ## 개발
 

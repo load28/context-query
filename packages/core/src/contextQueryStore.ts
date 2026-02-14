@@ -3,6 +3,8 @@ import { DerivedAtomStore } from "./derivedAtomStore";
 import { isDerivedAtom } from "./derived";
 import { isAtomConfig } from "./atom";
 import { AtomListener, Subscription, RESET } from "./types";
+import { createReactiveSystem } from "./signal/system";
+import type { ReactiveSystem } from "./signal/system";
 
 type AnyStore<T = any> = {
   getValue(): T;
@@ -30,6 +32,8 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
   private cachedSnapshot: TAtoms | null = null;
   private snapshotStale: boolean = true;
   private onError?: ContextQueryStoreOptions['onError'];
+  /** @internal Isolated reactive system instance for this store */
+  private system: ReactiveSystem;
 
   constructor(
     initialValues: { [K in keyof TAtoms]: TAtoms[K] | any },
@@ -37,6 +41,7 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
   ) {
     this.atoms = new Map();
     this.onError = options?.onError;
+    this.system = createReactiveSystem();
 
     const derivedEntries: Array<[string, { read: (get: (key: string) => any) => any }]> = [];
 
@@ -46,11 +51,11 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
         derivedEntries.push([key, value]);
         this.derivedKeys.add(key as keyof TAtoms);
       } else if (isAtomConfig(value)) {
-        const atomStore = new AtomStore(value.initialValue, value.equalityFn);
+        const atomStore = new AtomStore(value.initialValue, value.equalityFn, this.system);
         this.atoms.set(key as keyof TAtoms, atomStore);
         this.initialValues.set(key as keyof TAtoms, value.initialValue);
       } else {
-        const atomStore = new AtomStore(value);
+        const atomStore = new AtomStore(value, undefined, this.system);
         this.atoms.set(key as keyof TAtoms, atomStore);
         this.initialValues.set(key as keyof TAtoms, value);
       }
@@ -65,15 +70,16 @@ export class ContextQueryStore<TAtoms extends Record<string, any>> {
       return store;
     };
 
-    const derivedOnError = this.onError
-      ? (error: Error) => this.onError!(error, { type: 'derived' })
-      : undefined;
-
     for (const [key, config] of derivedEntries) {
       const keyOnError = this.onError
         ? (error: Error) => this.onError!(error, { key, type: 'derived' })
         : undefined;
-      const derivedStore = new DerivedAtomStore(config.read, resolveStore, keyOnError);
+      const derivedStore = new DerivedAtomStore(
+        config.read,
+        resolveStore,
+        keyOnError,
+        this.system
+      );
       this.atoms.set(key as keyof TAtoms, derivedStore);
     }
 

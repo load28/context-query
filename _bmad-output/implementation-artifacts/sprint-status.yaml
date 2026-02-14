@@ -1,0 +1,70 @@
+# generated: 2026-02-14
+# project: context-query
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-02-14
+project: context-query
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # Epic 1: 반응형 시그널 엔진 구현
+  epic-1: done
+  1-1-reactive-type-system-and-link: done
+  1-2-propagate-checkdirty-loop: done
+  1-3-diamond-problem-and-computed: done
+  1-4-reactive-state-signal: done
+  1-5-reactive-effect-and-system-factory: done
+  epic-1-retrospective: optional
+
+  # Epic 2: 스토어 계층 시그널 전환
+  epic-2: done
+  2-1-atomstore-signalstate-wrapper: done
+  2-2-derivedatomstore-signalcomputed-wrapper: done
+  2-3-contextquerystore-integration: done
+  epic-2-retrospective: optional
+
+  # Epic 3: 성능 검증 및 벤치마크
+  epic-3: done
+  3-1-signal-engine-benchmark: done
+  3-2-store-performance-benchmark: done
+  3-3-bundle-size-verification: done
+  epic-3-retrospective: optional
+
+  # Epic 4: 테스트 커버리지 및 문서화
+  epic-4: done
+  4-1-integration-test-suite: done
+  4-2-playground-update-signal-demo: done
+  epic-4-retrospective: optional

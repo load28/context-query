@@ -1,24 +1,65 @@
 import { AtomListener, Subscription } from "./types";
+import type { ReactiveSystem } from "./signal/system";
+import type { ReactiveComputed } from "./signal/computed";
+import { createReactiveSystem } from "./signal/system";
+
+let _defaultSystem: ReactiveSystem | null = null;
+function getDefaultSystem(): ReactiveSystem {
+  if (!_defaultSystem) _defaultSystem = createReactiveSystem();
+  return _defaultSystem;
+}
 
 export class DerivedAtomStore<T> {
-  private cachedValue: T | undefined = undefined;
-  private dirty: boolean = true;
+  private comp: ReactiveComputed<T>;
   private listeners: Set<AtomListener> = new Set();
   private depUnsubscribes: Subscription[] = [];
   private computing: boolean = false;
   private trackedDeps: Set<string> = new Set();
-  private error: Error | null = null;
+  private pendingNotification: boolean = false;
   private onError?: (error: Error) => void;
+  private resolveStoreFn: (key: string) => {
+    getValue(): any;
+    subscribe(listener: AtomListener): Subscription;
+  };
 
   constructor(
-    private readFn: (get: (key: string) => any) => T,
-    private resolveStore: (key: string) => {
+    readFn: (get: (key: string) => any) => T,
+    resolveStore: (key: string) => {
       getValue(): any;
       subscribe(listener: AtomListener): Subscription;
     },
-    onError?: (error: Error) => void
+    onError?: (error: Error) => void,
+    system?: ReactiveSystem
   ) {
     this.onError = onError;
+    this.resolveStoreFn = resolveStore;
+    const sys = system ?? getDefaultSystem();
+
+    this.comp = sys.computed(() => {
+      if (this.computing) {
+        throw new Error('Circular dependency detected in derived atom');
+      }
+      this.computing = true;
+      const newDeps = new Set<string>();
+      const get = (key: string) => {
+        newDeps.add(key);
+        return this.resolveStoreFn(key).getValue();
+      };
+      try {
+        const result = readFn(get);
+        this.trackedDeps = newDeps;
+        return result;
+      } catch (e) {
+        this.trackedDeps = newDeps;
+        // Call onError for non-circular errors
+        if (this.onError && !(e instanceof Error && e.message.includes('Circular dependency'))) {
+          this.onError(e instanceof Error ? e : new Error(String(e)));
+        }
+        throw e;
+      } finally {
+        this.computing = false;
+      }
+    });
   }
 
   /**
@@ -26,98 +67,64 @@ export class DerivedAtomStore<T> {
    * Computes the initial value and sets up dependency subscriptions.
    */
   initialize(): void {
-    this.recompute();
-  }
+    // Force initial computation
+    this.comp.get();
 
-  private recompute(): void {
-    if (this.computing) {
-      throw new Error('Circular dependency detected in derived atom');
+    // Circular dependency errors must propagate — they are fatal
+    if (this.comp.error && this.comp.error.message.includes('Circular dependency')) {
+      throw this.comp.error;
     }
 
-    this.computing = true;
+    // Set up external subscriptions for push notifications
+    this.setupExternalSubscriptions();
+  }
 
-    // Unsubscribe from old dependencies
+  private setupExternalSubscriptions(): void {
     for (const sub of this.depUnsubscribes) {
       sub.unsubscribe();
     }
     this.depUnsubscribes = [];
 
-    // Track new dependencies via get() calls
-    const newDeps = new Set<string>();
-    const get = (key: string) => {
-      newDeps.add(key);
-      return this.resolveStore(key).getValue();
-    };
-
-    try {
-      const newValue = this.readFn(get);
-      this.cachedValue = newValue;
-      this.error = null;
-      this.dirty = false;
-      this.trackedDeps = newDeps;
-
-      // Subscribe to new dependencies
-      for (const dep of newDeps) {
-        const store = this.resolveStore(dep);
-        const sub = store.subscribe(() => this.markDirty());
-        this.depUnsubscribes.push(sub);
-      }
-    } catch (err) {
-      // Circular dependency errors must propagate — they are fatal
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.includes('Circular dependency')) {
-        throw err;
-      }
-
-      this.error = err instanceof Error ? err : new Error(String(err));
-      this.dirty = false;
-      this.trackedDeps = newDeps;
-
-      if (this.onError) {
-        this.onError(this.error);
-      }
-
-      // Still subscribe to deps so we can recover when they change
-      for (const dep of newDeps) {
-        const store = this.resolveStore(dep);
-        const sub = store.subscribe(() => this.markDirty());
-        this.depUnsubscribes.push(sub);
-      }
-    } finally {
-      this.computing = false;
+    for (const dep of this.trackedDeps) {
+      const store = this.resolveStoreFn(dep);
+      const sub = store.subscribe(() => this.markDirty());
+      this.depUnsubscribes.push(sub);
     }
   }
 
   private markDirty(): void {
-    if (this.dirty) return;
-    this.dirty = true;
+    if (this.pendingNotification) return;
+    this.pendingNotification = true;
     // Snapshot listeners to prevent mutation during iteration
     const snapshot = [...this.listeners];
     snapshot.forEach((listener) => listener());
   }
 
   public getValue(): T {
-    if (this.dirty) {
-      this.recompute();
+    // Force lazy recomputation via signal graph
+    const value = this.comp.get();
+    this.pendingNotification = false;
+
+    // Check if deps changed (dynamic dependency tracking)
+    // Re-subscribe if needed
+    // Note: trackedDeps is updated inside the computed function on recomputation
+
+    if (this.comp.error) {
+      throw this.comp.error;
     }
-    if (this.error) {
-      throw this.error;
-    }
-    return this.cachedValue as T;
+    return value;
   }
 
   public hasError(): boolean {
-    if (this.dirty) {
-      this.recompute();
-    }
-    return this.error !== null;
+    this.comp.get();
+    this.pendingNotification = false;
+    return this.comp.error !== null;
   }
 
   public getError(): Error | null {
-    if (this.dirty) {
-      this.recompute();
-    }
-    return this.error;
+    this.comp.get();
+    this.pendingNotification = false;
+    return this.comp.error;
   }
 
   public setValue(_value: T): void {
