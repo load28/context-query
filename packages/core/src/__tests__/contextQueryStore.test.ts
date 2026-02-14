@@ -24,7 +24,7 @@ describe('ContextQueryStore', () => {
       const store = createStore();
       expect(() =>
         (store as any).getAtomValue('unknown')
-      ).toThrow('Atom with key "unknown" not found');
+      ).toThrow('Signal with key "unknown" not found');
     });
   });
 

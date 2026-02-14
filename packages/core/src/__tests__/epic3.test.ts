@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { AtomStore } from '../atomStore';
+import { Signal } from '../signal';
 import { ContextQueryStore } from '../contextQueryStore';
 import { atom } from '../atom';
 import { derived } from '../derived';
@@ -48,35 +48,35 @@ describe('Story 3.1: Custom equality', () => {
     });
   });
 
-  describe('AtomStore with equalityFn', () => {
+  describe('Signal with equalityFn', () => {
     it('uses Object.is by default', () => {
-      const store = new AtomStore({ name: 'John', age: 30 });
+      const sig = new Signal({ name: 'John', age: 30 });
       const listener = vi.fn();
-      store.subscribe(listener);
+      sig.subscribe(listener);
 
       // Different reference but same structure → should notify (Object.is)
-      store.setValue({ name: 'John', age: 30 });
+      sig.value = { name: 'John', age: 30 };
       expect(listener).toHaveBeenCalledTimes(1);
     });
 
     it('uses custom equalityFn when provided', () => {
-      const store = new AtomStore({ name: 'John', age: 30 }, shallowEqual);
+      const sig = new Signal({ name: 'John', age: 30 }, { equalityFn: shallowEqual });
       const listener = vi.fn();
-      store.subscribe(listener);
+      sig.subscribe(listener);
 
       // Same structure → should NOT notify (shallowEqual)
-      store.setValue({ name: 'John', age: 30 });
+      sig.value = { name: 'John', age: 30 };
       expect(listener).not.toHaveBeenCalled();
     });
 
     it('notifies when shallowEqual detects change', () => {
-      const store = new AtomStore({ name: 'John', age: 30 }, shallowEqual);
+      const sig = new Signal({ name: 'John', age: 30 }, { equalityFn: shallowEqual });
       const listener = vi.fn();
-      store.subscribe(listener);
+      sig.subscribe(listener);
 
-      store.setValue({ name: 'Jane', age: 30 });
+      sig.value = { name: 'Jane', age: 30 };
       expect(listener).toHaveBeenCalledTimes(1);
-      expect(store.getValue()).toEqual({ name: 'Jane', age: 30 });
+      expect(sig.value).toEqual({ name: 'Jane', age: 30 });
     });
   });
 
@@ -146,13 +146,13 @@ describe('Story 3.3: Atom reset', () => {
       expect(listener).not.toHaveBeenCalled();
     });
 
-    it('throws when trying to reset derived atom', () => {
+    it('throws when trying to reset derived signal', () => {
       const store = new ContextQueryStore({
         a: 1,
         doubled: derived((get) => get('a') * 2),
       });
 
-      expect(() => store.resetAtom('doubled')).toThrow('Cannot reset derived atom');
+      expect(() => store.resetAtom('doubled')).toThrow('Cannot reset derived signal');
     });
   });
 

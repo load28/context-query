@@ -226,7 +226,7 @@ describe('Derived atoms with React hooks', () => {
       );
 
       expect(() => storeRef.setAtomValue('fullName', 'WRONG')).toThrow(
-        'Cannot set value of derived atom'
+        'Cannot set value of derived signal'
       );
     });
   });

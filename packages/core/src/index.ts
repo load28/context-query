@@ -1,7 +1,7 @@
 export { ContextQueryStore } from "./contextQueryStore";
 export type { ContextQueryStoreOptions, AtomDebugInfo } from "./contextQueryStore";
-export { AtomStore } from "./atomStore";
-export { DerivedAtomStore } from "./derivedAtomStore";
+export { Signal, Computed, signal, computed, effect, batch } from "./signal";
+export type { SignalOptions, ComputedOptions } from "./signal";
 export { derived, isDerivedAtom } from "./derived";
 export type { DerivedAtomConfig } from "./derived";
 export { atom, isAtomConfig } from "./atom";

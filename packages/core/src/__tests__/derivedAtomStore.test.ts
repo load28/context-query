@@ -12,8 +12,8 @@ describe('derived() helper', () => {
   });
 });
 
-describe('DerivedAtomStore via ContextQueryStore', () => {
-  describe('basic derived atom', () => {
+describe('Computed signals via ContextQueryStore', () => {
+  describe('basic computed signal', () => {
     it('computes initial value from dependencies', () => {
       const store = new ContextQueryStore({
         firstName: 'John',
@@ -46,7 +46,7 @@ describe('DerivedAtomStore via ContextQueryStore', () => {
       expect(store.getAtomValue('fullName')).toBe('John Smith');
     });
 
-    it('computes derived atom from numeric values', () => {
+    it('computes derived signal from numeric values', () => {
       const store = new ContextQueryStore({
         price: 100,
         quantity: 3,
@@ -64,18 +64,18 @@ describe('DerivedAtomStore via ContextQueryStore', () => {
   });
 
   describe('setValue restriction', () => {
-    it('throws when trying to set a derived atom value', () => {
+    it('throws when trying to set a computed signal value', () => {
       const store = new ContextQueryStore({
         a: 1,
         b: derived((get) => get('a') * 2),
       });
 
       expect(() => store.setAtomValue('b', 10)).toThrow(
-        'Cannot set value of derived atom "b"'
+        'Cannot set value of derived signal "b"'
       );
     });
 
-    it('isDerivedKey returns true for derived atoms', () => {
+    it('isDerivedKey returns true for computed signals', () => {
       const store = new ContextQueryStore({
         a: 1,
         b: derived((get) => get('a') * 2),
@@ -87,7 +87,7 @@ describe('DerivedAtomStore via ContextQueryStore', () => {
   });
 
   describe('subscription', () => {
-    it('notifies subscribers when derived value changes', () => {
+    it('notifies subscribers when computed value changes', () => {
       const store = new ContextQueryStore({
         a: 1,
         doubled: derived((get) => get('a') * 2),
@@ -112,12 +112,10 @@ describe('DerivedAtomStore via ContextQueryStore', () => {
 
       // Change a from 1 to 2 — isPositive stays true
       store.setAtomValue('a', 2);
-      // The listener is called for dirty propagation, but the value stays true
-      // When getValue is called, it recomputes and finds same value
       expect(store.getAtomValue('isPositive')).toBe(true);
     });
 
-    it('correctly unsubscribes from derived atom', () => {
+    it('correctly unsubscribes from computed signal', () => {
       const store = new ContextQueryStore({
         a: 1,
         doubled: derived((get) => get('a') * 2),
@@ -132,8 +130,8 @@ describe('DerivedAtomStore via ContextQueryStore', () => {
     });
   });
 
-  describe('chained derived atoms', () => {
-    it('supports A → B(derived from A) → C(derived from B)', () => {
+  describe('chained computed signals', () => {
+    it('supports A → B(computed from A) → C(computed from B)', () => {
       const store = new ContextQueryStore({
         a: 2,
         b: derived((get) => get('a') * 10),
@@ -165,7 +163,7 @@ describe('DerivedAtomStore via ContextQueryStore', () => {
   });
 
   describe('diamond dependency', () => {
-    it('handles diamond: A → B, A → C, D(derived from B+C)', () => {
+    it('handles diamond: A → B, A → C, D(computed from B+C)', () => {
       const store = new ContextQueryStore({
         a: 1,
         b: derived((get) => get('a') * 2),
@@ -179,7 +177,7 @@ describe('DerivedAtomStore via ContextQueryStore', () => {
       expect(store.getAtomValue('d')).toBe(50); // 20 + 30
     });
 
-    it('diamond derived atom computes correct value (no glitch)', () => {
+    it('diamond computed signal computes correct value (no glitch)', () => {
       const computeFn = vi.fn((get: (key: string) => any) => get('b') + get('c'));
 
       const store = new ContextQueryStore({
@@ -222,7 +220,7 @@ describe('DerivedAtomStore via ContextQueryStore', () => {
   });
 
   describe('snapshot', () => {
-    it('includes derived atoms in snapshot', () => {
+    it('includes computed signals in snapshot', () => {
       const store = new ContextQueryStore({
         firstName: 'John',
         lastName: 'Doe',
@@ -237,7 +235,7 @@ describe('DerivedAtomStore via ContextQueryStore', () => {
       });
     });
 
-    it('snapshot updates when derived atom dependency changes', () => {
+    it('snapshot updates when computed signal dependency changes', () => {
       const store = new ContextQueryStore({
         a: 1,
         doubled: derived((get) => get('a') * 2),
@@ -250,13 +248,13 @@ describe('DerivedAtomStore via ContextQueryStore', () => {
   });
 
   describe('patch', () => {
-    it('ignores derived atom keys in patch', () => {
+    it('ignores computed signal keys in patch', () => {
       const store = new ContextQueryStore({
         a: 1,
         doubled: derived((get) => get('a') * 2),
       });
 
-      // Attempting to patch a derived key should be silently ignored
+      // Attempting to patch a computed key should be silently ignored
       store.patch({ a: 5, doubled: 999 } as any);
       expect(store.getAtomValue('a')).toBe(5);
       expect(store.getAtomValue('doubled')).toBe(10); // Not 999
@@ -264,7 +262,7 @@ describe('DerivedAtomStore via ContextQueryStore', () => {
   });
 
   describe('store-wide subscribe', () => {
-    it('fires when derived atom value changes via dependency', () => {
+    it('fires when computed signal value changes via dependency', () => {
       const store = new ContextQueryStore({
         a: 1,
         doubled: derived((get) => get('a') * 2),
@@ -283,7 +281,7 @@ describe('DerivedAtomStore via ContextQueryStore', () => {
   });
 
   describe('performance', () => {
-    it('lazily evaluates derived atoms (no compute until getValue)', () => {
+    it('lazily evaluates computed signals (no compute until getValue)', () => {
       const computeFn = vi.fn((get: (key: string) => any) => get('a') * 2);
 
       const store = new ContextQueryStore({
