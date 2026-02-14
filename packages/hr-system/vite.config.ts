@@ -1,0 +1,16 @@
+import tailwind from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  base: process.env.BASE_PATH || "/",
+  plugins: [react(), tailwind()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      "@context-query/react": path.resolve(__dirname, "../react/src/index.ts"),
+      "@context-query/core": path.resolve(__dirname, "../core/src/index.ts"),
+    },
+  },
+});
