@@ -63,148 +63,135 @@ pnpm add @context-query/react
 
 ## Usage
 
-### 1. Create a Context Query Provider
+### 1. Define Your Provider
 
 ```tsx
-// CounterContextQueryProvider.tsx
+// TodoProvider.tsx
 import { createContextQuery } from "@context-query/react";
+import { derived, atom } from "@context-query/core";
+import { shallowEqual } from "@context-query/core";
 
-type CounterAtoms = {
-  primaryCounter: {
-    name: string;
-    value: number;
-    description: string;
-  };
-  secondaryCounter: {
-    name: string;
-    value: number;
-    description: string;
-  };
+type Todo = { id: number; text: string; done: boolean };
+
+type TodoAtoms = {
+  todos: Todo[];
+  filter: "all" | "active" | "done";
+  filteredTodos: Todo[];
+  stats: { total: number; active: number; done: number };
 };
 
 export const {
-  ContextQueryProvider: CounterQueryProvider,
-  useContextAtom: useCounterAtom,
-  useContextAtomValue: useCounterAtomValue,
-  useContextSetAtom: useCounterSetAtom,
-} = createContextQuery<CounterAtoms>();
+  ContextQueryProvider: TodoProvider,
+  useContextAtom: useTodoAtom,
+  useContextAtomValue: useTodoValue,
+  useContextSetAtom: useTodoSet,
+} = createContextQuery<TodoAtoms>();
 ```
 
-### 2. Wrap Your Component Tree with the Provider and Initialize Atoms
+### 2. Initialize with Atoms, Derived State, and Custom Equality
 
 ```tsx
-// CounterApp.tsx
-import { CounterQueryProvider } from "./CounterContextQueryProvider";
+// App.tsx
+import { TodoProvider } from "./TodoProvider";
+import { derived, atom } from "@context-query/core";
+import { shallowEqual } from "@context-query/core";
 
-function CounterApp() {
+function App() {
   return (
-    <CounterQueryProvider
+    <TodoProvider
       atoms={{
-        primaryCounter: {
-          name: "Primary Counter",
-          value: 0,
-          description: "Main counter that controls other counters",
-        },
-        secondaryCounter: {
-          name: "Secondary Counter",
-          value: 0,
-          description: "Secondary counter linked to primary",
-        },
+        todos: atom([] as Todo[], { equalityFn: shallowEqual }),
+        filter: "all",
+        // Derived: auto-computed from todos + filter
+        filteredTodos: derived((get) => {
+          const todos = get("todos");
+          const filter = get("filter");
+          if (filter === "active") return todos.filter((t) => !t.done);
+          if (filter === "done") return todos.filter((t) => t.done);
+          return todos;
+        }),
+        // Derived: stats auto-computed from todos
+        stats: derived((get) => {
+          const todos = get("todos");
+          return {
+            total: todos.length,
+            active: todos.filter((t) => !t.done).length,
+            done: todos.filter((t) => t.done).length,
+          };
+        }),
       }}
     >
-      <CounterContent />
-    </CounterQueryProvider>
-  );
-}
-
-function CounterContent() {
-  return (
-    <div className="counter-app">
-      <PrimaryCounterComponent />
-      <SecondaryCounterComponent />
-    </div>
+      <TodoApp />
+    </TodoProvider>
   );
 }
 ```
 
-### 3. Use Atoms in Your Components
+### 3. Use in Components
 
 ```tsx
-// PrimaryCounterComponent.tsx
-import { useCounterAtom, useCounterSetAtom } from "./CounterContextQueryProvider";
+// Only re-renders when filteredTodos changes
+function TodoList() {
+  const todos = useTodoValue("filteredTodos");
 
-function PrimaryCounterComponent() {
-  // Subscribe to primary counter atom only
-  const [primaryCounter, setPrimaryCounter] = useCounterAtom("primaryCounter");
-  const setSecondaryCounter = useCounterSetAtom("secondaryCounter");
+  return (
+    <ul>
+      {todos.map((todo) => (
+        <TodoItem key={todo.id} id={todo.id} />
+      ))}
+    </ul>
+  );
+}
 
-  const increment = () => {
-    setPrimaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
-    // Also update secondary counter
-    setSecondaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
-  };
+// Read-write access to todos
+function TodoItem({ id }: { id: number }) {
+  const [todos, setTodos] = useTodoAtom("todos");
+  const todo = todos.find((t) => t.id === id);
 
-  const decrement = () => {
-    setPrimaryCounter((prev) => ({ ...prev, value: prev.value - 1 }));
-  };
-
-  const reset = () => {
-    setPrimaryCounter((prev) => ({ ...prev, value: 0 }));
+  const toggle = () => {
+    setTodos((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t))
+    );
   };
 
   return (
-    <div className="counter">
-      <h2>{primaryCounter.name}</h2>
-      <p>{primaryCounter.description}</p>
-      <div className="counter-controls">
-        <span>{primaryCounter.value}</span>
-        <button onClick={decrement}>-</button>
-        <button onClick={increment}>+</button>
-        <button onClick={reset}>Reset</button>
-      </div>
+    <li onClick={toggle} style={{ textDecoration: todo?.done ? "line-through" : "none" }}>
+      {todo?.text}
+    </li>
+  );
+}
+
+// Write-only: no re-render when todos change
+function AddTodo() {
+  const setTodos = useTodoSet("todos");
+
+  const add = (text: string) => {
+    setTodos((prev) => [...prev, { id: Date.now(), text, done: false }]);
+  };
+
+  return <button onClick={() => add("New task")}>Add</button>;
+}
+
+// Read-only: only re-renders when stats change
+function Stats() {
+  const stats = useTodoValue("stats");
+
+  return (
+    <div>
+      Total: {stats.total} | Active: {stats.active} | Done: {stats.done}
     </div>
   );
 }
 
-// SecondaryCounterComponent.tsx
-import { useCounterAtomValue } from "./CounterContextQueryProvider";
-
-function SecondaryCounterComponent() {
-  // Read-only access to secondary counter atom
-  const secondaryCounter = useCounterAtomValue("secondaryCounter");
+// Filter buttons: write-only, no re-render
+function FilterButtons() {
+  const setFilter = useTodoSet("filter");
 
   return (
-    <div className="counter secondary">
-      <h3>{secondaryCounter.name}</h3>
-      <p>{secondaryCounter.description}</p>
-      <div className="counter-display">
-        <span>{secondaryCounter.value}</span>
-      </div>
-    </div>
-  );
-}
-
-// BatchUpdateComponent.tsx
-import { useCounterSetAtom } from "./CounterContextQueryProvider";
-
-function BatchUpdateComponent() {
-  const setPrimaryCounter = useCounterSetAtom("primaryCounter");
-  const setSecondaryCounter = useCounterSetAtom("secondaryCounter");
-
-  const resetAll = () => {
-    setPrimaryCounter((prev) => ({ ...prev, value: 0 }));
-    setSecondaryCounter((prev) => ({ ...prev, value: 0 }));
-  };
-
-  const incrementAll = () => {
-    setPrimaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
-    setSecondaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
-  };
-
-  return (
-    <div className="batch-controls">
-      <button onClick={resetAll}>Reset All Counters</button>
-      <button onClick={incrementAll}>Increment All Counters</button>
+    <div>
+      <button onClick={() => setFilter("all")}>All</button>
+      <button onClick={() => setFilter("active")}>Active</button>
+      <button onClick={() => setFilter("done")}>Done</button>
     </div>
   );
 }
@@ -212,10 +199,10 @@ function BatchUpdateComponent() {
 
 This example demonstrates:
 
-1. **Atom-based Architecture**: Each piece of state is managed as a separate atom
-2. **Granular Subscriptions**: Components subscribe only to the atoms they need, optimizing re-renders
-3. **Read-Write Separation**: Use `useContextAtom` for read-write access, `useContextAtomValue` for read-only access, and `useContextSetAtom` for write-only access
-4. **Cross-Atom Updates**: Components can update multiple atoms independently
+1. **`derived()`**: `filteredTodos` and `stats` auto-compute from `todos` and `filter`
+2. **`atom()` + `shallowEqual`**: Prevents unnecessary re-renders for reference-equal objects
+3. **Granular Subscriptions**: Each component subscribes only to what it needs
+4. **Read-Write Separation**: `useTodoValue` (read-only), `useTodoSet` (write-only), `useTodoAtom` (both)
 
 ## Architecture
 
@@ -416,6 +403,67 @@ function BatchControls() {
   };
 
   return <button onClick={resetAll}>Reset All</button>;
+}
+```
+
+### Error Handling
+
+Handle errors in derived atoms with the `onError` callback:
+
+```tsx
+import { ContextQueryStore, derived } from "@context-query/core";
+
+const store = new ContextQueryStore(
+  {
+    data: '{"count": 42}',
+    parsed: derived((get) => JSON.parse(get("data"))),
+  },
+  {
+    onError: (error, { key, type }) => {
+      console.error(`Error in ${type} atom "${key}":`, error.message);
+    },
+  }
+);
+
+// Check for errors
+store.getAtomError("parsed"); // null or Error
+```
+
+### Reset Atoms
+
+Reset individual atoms or all atoms to their initial values:
+
+```tsx
+import { RESET } from "@context-query/core";
+
+const store = new ContextQueryStore({ count: 0, name: "initial" });
+
+store.setAtomValue("count", 42);
+store.resetAtom("count");          // → 0
+store.setAtomValue("count", RESET); // also resets to 0
+store.resetAll();                   // reset everything
+```
+
+### Store API
+
+Access the store directly for advanced operations:
+
+```tsx
+function AdvancedUsage() {
+  const store = useStore();
+
+  // Batch update multiple atoms
+  store.patch({ count: 10, name: "updated" });
+
+  // Get all atom values as a snapshot (cached, same reference if unchanged)
+  const snapshot = store.getSnapshot();
+
+  // Debug: inspect dependency graph and atom info
+  console.log(store.getDependencyGraph());
+  // → { filteredTodos: ["todos", "filter"], stats: ["todos"] }
+
+  console.log(store.getDebugInfo());
+  // → { count: { value: 10, subscriberCount: 2, isDerived: false }, ... }
 }
 ```
 

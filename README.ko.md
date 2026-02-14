@@ -63,148 +63,135 @@ pnpm add @context-query/react
 
 ## 사용법
 
-### 1. Context Query Provider 생성
+### 1. Provider 정의하기
 
 ```tsx
-// CounterContextQueryProvider.tsx
+// TodoProvider.tsx
 import { createContextQuery } from "@context-query/react";
+import { derived, atom } from "@context-query/core";
+import { shallowEqual } from "@context-query/core";
 
-type CounterAtoms = {
-  primaryCounter: {
-    name: string;
-    value: number;
-    description: string;
-  };
-  secondaryCounter: {
-    name: string;
-    value: number;
-    description: string;
-  };
+type Todo = { id: number; text: string; done: boolean };
+
+type TodoAtoms = {
+  todos: Todo[];
+  filter: "all" | "active" | "done";
+  filteredTodos: Todo[];
+  stats: { total: number; active: number; done: number };
 };
 
 export const {
-  ContextQueryProvider: CounterQueryProvider,
-  useContextAtom: useCounterAtom,
-  useContextAtomValue: useCounterAtomValue,
-  useContextSetAtom: useCounterSetAtom,
-} = createContextQuery<CounterAtoms>();
+  ContextQueryProvider: TodoProvider,
+  useContextAtom: useTodoAtom,
+  useContextAtomValue: useTodoValue,
+  useContextSetAtom: useTodoSet,
+} = createContextQuery<TodoAtoms>();
 ```
 
-### 2. Provider로 컴포넌트 트리 감싸기 및 Atom 초기화
+### 2. Atom, 파생 상태, 커스텀 동등성 비교로 초기화
 
 ```tsx
-// CounterApp.tsx
-import { CounterQueryProvider } from "./CounterContextQueryProvider";
+// App.tsx
+import { TodoProvider } from "./TodoProvider";
+import { derived, atom } from "@context-query/core";
+import { shallowEqual } from "@context-query/core";
 
-function CounterApp() {
+function App() {
   return (
-    <CounterQueryProvider
+    <TodoProvider
       atoms={{
-        primaryCounter: {
-          name: "메인 카운터",
-          value: 0,
-          description: "다른 카운터들을 제어하는 메인 카운터",
-        },
-        secondaryCounter: {
-          name: "보조 카운터",
-          value: 0,
-          description: "메인 카운터와 연동되는 보조 카운터",
-        },
+        todos: atom([] as Todo[], { equalityFn: shallowEqual }),
+        filter: "all",
+        // 파생 상태: todos + filter에서 자동 계산
+        filteredTodos: derived((get) => {
+          const todos = get("todos");
+          const filter = get("filter");
+          if (filter === "active") return todos.filter((t) => !t.done);
+          if (filter === "done") return todos.filter((t) => t.done);
+          return todos;
+        }),
+        // 파생 상태: todos에서 통계 자동 계산
+        stats: derived((get) => {
+          const todos = get("todos");
+          return {
+            total: todos.length,
+            active: todos.filter((t) => !t.done).length,
+            done: todos.filter((t) => t.done).length,
+          };
+        }),
       }}
     >
-      <CounterContent />
-    </CounterQueryProvider>
-  );
-}
-
-function CounterContent() {
-  return (
-    <div className="counter-app">
-      <PrimaryCounterComponent />
-      <SecondaryCounterComponent />
-    </div>
+      <TodoApp />
+    </TodoProvider>
   );
 }
 ```
 
-### 3. 컴포넌트에서 Atom 사용하기
+### 3. 컴포넌트에서 사용하기
 
 ```tsx
-// PrimaryCounterComponent.tsx
-import { useCounterAtom, useCounterSetAtom } from "./CounterContextQueryProvider";
+// filteredTodos가 변경될 때만 리렌더링
+function TodoList() {
+  const todos = useTodoValue("filteredTodos");
 
-function PrimaryCounterComponent() {
-  // primary counter atom만 구독
-  const [primaryCounter, setPrimaryCounter] = useCounterAtom("primaryCounter");
-  const setSecondaryCounter = useCounterSetAtom("secondaryCounter");
+  return (
+    <ul>
+      {todos.map((todo) => (
+        <TodoItem key={todo.id} id={todo.id} />
+      ))}
+    </ul>
+  );
+}
 
-  const increment = () => {
-    setPrimaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
-    // 보조 카운터도 함께 업데이트
-    setSecondaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
-  };
+// todos에 대한 읽기-쓰기 액세스
+function TodoItem({ id }: { id: number }) {
+  const [todos, setTodos] = useTodoAtom("todos");
+  const todo = todos.find((t) => t.id === id);
 
-  const decrement = () => {
-    setPrimaryCounter((prev) => ({ ...prev, value: prev.value - 1 }));
-  };
-
-  const reset = () => {
-    setPrimaryCounter((prev) => ({ ...prev, value: 0 }));
+  const toggle = () => {
+    setTodos((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t))
+    );
   };
 
   return (
-    <div className="counter">
-      <h2>{primaryCounter.name}</h2>
-      <p>{primaryCounter.description}</p>
-      <div className="counter-controls">
-        <span>{primaryCounter.value}</span>
-        <button onClick={decrement}>-</button>
-        <button onClick={increment}>+</button>
-        <button onClick={reset}>초기화</button>
-      </div>
+    <li onClick={toggle} style={{ textDecoration: todo?.done ? "line-through" : "none" }}>
+      {todo?.text}
+    </li>
+  );
+}
+
+// 쓰기 전용: todos가 변경되어도 리렌더링 없음
+function AddTodo() {
+  const setTodos = useTodoSet("todos");
+
+  const add = (text: string) => {
+    setTodos((prev) => [...prev, { id: Date.now(), text, done: false }]);
+  };
+
+  return <button onClick={() => add("새 할일")}>추가</button>;
+}
+
+// 읽기 전용: stats가 변경될 때만 리렌더링
+function Stats() {
+  const stats = useTodoValue("stats");
+
+  return (
+    <div>
+      전체: {stats.total} | 진행중: {stats.active} | 완료: {stats.done}
     </div>
   );
 }
 
-// SecondaryCounterComponent.tsx
-import { useCounterAtomValue } from "./CounterContextQueryProvider";
-
-function SecondaryCounterComponent() {
-  // secondary counter atom에 대한 읽기 전용 액세스
-  const secondaryCounter = useCounterAtomValue("secondaryCounter");
+// 필터 버튼: 쓰기 전용, 리렌더링 없음
+function FilterButtons() {
+  const setFilter = useTodoSet("filter");
 
   return (
-    <div className="counter secondary">
-      <h3>{secondaryCounter.name}</h3>
-      <p>{secondaryCounter.description}</p>
-      <div className="counter-display">
-        <span>{secondaryCounter.value}</span>
-      </div>
-    </div>
-  );
-}
-
-// BatchUpdateComponent.tsx
-import { useCounterSetAtom } from "./CounterContextQueryProvider";
-
-function BatchUpdateComponent() {
-  const setPrimaryCounter = useCounterSetAtom("primaryCounter");
-  const setSecondaryCounter = useCounterSetAtom("secondaryCounter");
-
-  const resetAll = () => {
-    setPrimaryCounter((prev) => ({ ...prev, value: 0 }));
-    setSecondaryCounter((prev) => ({ ...prev, value: 0 }));
-  };
-
-  const incrementAll = () => {
-    setPrimaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
-    setSecondaryCounter((prev) => ({ ...prev, value: prev.value + 1 }));
-  };
-
-  return (
-    <div className="batch-controls">
-      <button onClick={resetAll}>모든 카운터 초기화</button>
-      <button onClick={incrementAll}>모든 카운터 증가</button>
+    <div>
+      <button onClick={() => setFilter("all")}>전체</button>
+      <button onClick={() => setFilter("active")}>진행중</button>
+      <button onClick={() => setFilter("done")}>완료</button>
     </div>
   );
 }
@@ -212,10 +199,10 @@ function BatchUpdateComponent() {
 
 이 예시는 다음을 보여줍니다:
 
-1. **Atom 기반 아키텍처**: 각 상태 조각이 별도의 atom으로 관리됨
-2. **세밀한 구독**: 컴포넌트는 필요한 atom만 구독하여 리렌더링을 최적화
-3. **읽기-쓰기 분리**: 읽기-쓰기 액세스는 `useContextAtom`, 읽기 전용은 `useContextAtomValue`, 쓰기 전용은 `useContextSetAtom` 사용
-4. **Atom 간 업데이트**: 컴포넌트는 여러 atom을 독립적으로 업데이트 가능
+1. **`derived()`**: `filteredTodos`와 `stats`가 `todos`와 `filter`에서 자동 계산
+2. **`atom()` + `shallowEqual`**: 참조가 다르더라도 구조가 같으면 리렌더링 방지
+3. **세밀한 구독**: 각 컴포넌트가 필요한 것만 구독
+4. **읽기-쓰기 분리**: `useTodoValue` (읽기 전용), `useTodoSet` (쓰기 전용), `useTodoAtom` (읽기+쓰기)
 
 ## 아키텍처
 
@@ -416,6 +403,67 @@ function BatchControls() {
   };
 
   return <button onClick={resetAll}>모두 초기화</button>;
+}
+```
+
+### 에러 핸들링
+
+파생 atom의 에러를 `onError` 콜백으로 처리할 수 있습니다:
+
+```tsx
+import { ContextQueryStore, derived } from "@context-query/core";
+
+const store = new ContextQueryStore(
+  {
+    data: '{"count": 42}',
+    parsed: derived((get) => JSON.parse(get("data"))),
+  },
+  {
+    onError: (error, { key, type }) => {
+      console.error(`${type} atom "${key}"에서 에러:`, error.message);
+    },
+  }
+);
+
+// 에러 확인
+store.getAtomError("parsed"); // null 또는 Error
+```
+
+### Atom 리셋
+
+개별 atom 또는 전체 atom을 초기값으로 리셋할 수 있습니다:
+
+```tsx
+import { RESET } from "@context-query/core";
+
+const store = new ContextQueryStore({ count: 0, name: "초기값" });
+
+store.setAtomValue("count", 42);
+store.resetAtom("count");          // → 0
+store.setAtomValue("count", RESET); // 이것도 0으로 리셋
+store.resetAll();                   // 전체 리셋
+```
+
+### Store API
+
+고급 작업을 위해 스토어에 직접 접근할 수 있습니다:
+
+```tsx
+function AdvancedUsage() {
+  const store = useStore();
+
+  // 여러 atom을 한번에 업데이트
+  store.patch({ count: 10, name: "업데이트" });
+
+  // 모든 atom 값을 스냅샷으로 가져오기 (캐싱됨, 변경 없으면 같은 참조)
+  const snapshot = store.getSnapshot();
+
+  // 디버그: 의존성 그래프 및 atom 정보 확인
+  console.log(store.getDependencyGraph());
+  // → { filteredTodos: ["todos", "filter"], stats: ["todos"] }
+
+  console.log(store.getDebugInfo());
+  // → { count: { value: 10, subscriberCount: 2, isDerived: false }, ... }
 }
 ```
 
