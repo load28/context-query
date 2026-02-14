@@ -54,7 +54,7 @@ function App() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               <span className="text-xs font-mono text-muted-foreground bg-secondary rounded-full px-2.5 py-1">
-                v0.6.0
+                v0.5.1
               </span>
               <a
                 href="https://github.com/load28/context-query"
